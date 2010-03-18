@@ -347,11 +347,9 @@ class TemplateTag(template.Node):
             self._set_var(arg, arg.default)
 
     def _compile_filter(self, arg, value):
-        fe = template.FilterExpression(value, self.parser)
-        if not arg.resolve and fe.var.lookups:
-            fe.var.lookups = None
-            fe.var.literal = fe.var.var
-        return fe
+        if not arg.resolve:
+            return value
+        return template.FilterExpression(value, self.parser)
 
     def _set_var(self, arg, value):
         if value and isinstance(value, (list, tuple)):
