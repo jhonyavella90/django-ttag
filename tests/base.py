@@ -39,6 +39,12 @@ class NoArgumentTag(tagcon.TemplateTag):
     def render(self, context):
         return 'No arguments here'
 
+class SinglePositionalTag(tagcon.TemplateTag):
+    _ = tagcon.IntegerArg(name="single_arg", default=5)
+
+    def render(self, context):
+        return '%s' % self.args.single_arg
+
 
 class ArgumentTypeTag(tagcon.TemplateTag):
 
@@ -58,6 +64,7 @@ class ArgumentTypeTag(tagcon.TemplateTag):
 
 add_to_builtins(KeywordTag.__module__)
 add_to_builtins(NoArgumentTag.__module__)
+add_to_builtins(SinglePositionalTag.__module__)
 add_to_builtins(ArgumentTypeTag.__module__)
 
 render = lambda t: Template(t).render(Context())
@@ -76,6 +83,8 @@ class TagExecutionTests(TestCase):
                          'The limit is %d' %
                          KeywordTag._keyword_args['limit'].default)
 
+        self.assertEqual(Template('{% single_positional 10 %}').render(Context()),
+                         u"10")
 
         self.assertRaises(tagcon.TemplateTagValidationError,
                           render,

@@ -215,21 +215,20 @@ class TemplateTagBase(type):
         # shortcut for single-arg case
         if isinstance(positional_args, Arg):
             positional_args = (positional_args,)
-        else:
-            for arg in positional_args:
-                if isinstance(arg, Arg):
-                    if not arg.name:
-                        raise TypeError(
-                            "Positional arguments must have 'name' specified."
-                        )
-                    # positional args are always required
-                    arg.required = True
-                elif not isinstance(arg, basestring):
+        for arg in positional_args:
+            if isinstance(arg, Arg):
+                if not arg.name:
                     raise TypeError(
-                        "positional args must be Arg instances or strings"
+                        "Positional arguments must have 'name' specified."
                     )
-                elif not arg:
-                    raise ValueError("Empty strings are not valid arguments.")
+                # positional args are always required
+                arg.required = True
+            elif not isinstance(arg, basestring):
+                raise TypeError(
+                    "positional args must be Arg instances or strings"
+                )
+            elif not arg:
+                raise ValueError("Empty strings are not valid arguments.")
         attrs['_positional_args'] = positional_args
         all_args = dict(
             (arg.name, arg) for arg in positional_args if isinstance(arg, Arg)
