@@ -63,6 +63,7 @@ class ArgumentTypeTag(tagcon.TemplateTag):
                          None])
 
 add_to_builtins(KeywordTag.__module__)
+add_to_builtins(KeywordNoDefaultTag.__module__)
 add_to_builtins(NoArgumentTag.__module__)
 add_to_builtins(SinglePositionalTag.__module__)
 add_to_builtins(ArgumentTypeTag.__module__)
