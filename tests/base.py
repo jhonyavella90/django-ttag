@@ -174,10 +174,9 @@ class TestArgumentTypes(TestCase):
         self.assertEqual(t.render(Context()), 'bob')
 
         # will not find a var named dave in the context
-        try:
-            render('{% argument_type name dave %}')
-        except TemplateSyntaxError, e:
-            self.assertTrue(isinstance(e.exc_info[1], VariableDoesNotExist))
+        self.assertRaises(VariableDoesNotExist,
+                          render,
+                          '{% argument_type name dave %}')
 
     def test_datetime_arg(self):
         t = Template('{% argument_type datetime dt %}')
