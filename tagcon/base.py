@@ -165,6 +165,8 @@ def _invalid_template_string(var):
 def _wrap_render(unwrapped_render):
     def render(self, context):
         try:
+            if self._resolve:
+                self.resolve(context)
             return _unroll_render(unwrapped_render(self, context))
         except template.VariableDoesNotExist, exc:
             if self.silence_errors:
@@ -204,6 +206,8 @@ class TemplateTagBase(type):
         attrs['silence_errors'] = getattr(meta, 'silence_errors', False)
 
         attrs['block'] = getattr(meta, 'block', False)
+
+        attrs['_resolve'] = getattr(meta, 'resolve', True)
 
         # wrap render so it can optionally yield strings as a generator, and so
         # we can catch exceptions if necessary

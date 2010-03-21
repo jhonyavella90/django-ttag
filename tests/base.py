@@ -33,6 +33,15 @@ class KeywordNoDefaultTag(tagcon.TemplateTag):
         self.resolve(context)
         return 'The limit is %d' % self.args.limit
 
+class KeywordNoResolve(tagcon.TemplateTag):
+
+    limit = tagcon.IntegerArg(default=5)
+
+    class Meta:
+        resolve = False
+
+    def render(self, context):
+        return 'The limit is %d' % self.args.limit
 
 class NoArgumentTag(tagcon.TemplateTag):
 
@@ -64,6 +73,7 @@ class ArgumentTypeTag(tagcon.TemplateTag):
 
 add_to_builtins(KeywordTag.__module__)
 add_to_builtins(KeywordNoDefaultTag.__module__)
+add_to_builtins(KeywordNoResolve.__module__)
 add_to_builtins(NoArgumentTag.__module__)
 add_to_builtins(SinglePositionalTag.__module__)
 add_to_builtins(ArgumentTypeTag.__module__)
@@ -115,6 +125,16 @@ class TagExecutionTests(TestCase):
         self.assertRaises(TemplateSyntaxError,
                           Template,
                           '{% no_argument this fails %}')
+
+    def test_auto_resolve(self):
+        # Check what happends if auto resolving is disabled but
+        # no resolve() isn't called
+        KeywordNoResolve._resolve = False
+        self.assertRaises(tagcon.TemplateTagArgumentMissing,
+                          render, '{% keyword_no_resolve limit 200 %}')
+        KeywordNoResolve._resolve = True
+        self.assertEqual(Template('{% keyword_no_resolve limit 200 %}').render(Context()),
+                         'The limit is 200')
 
 
 class TestArgumentTypes(TestCase):
