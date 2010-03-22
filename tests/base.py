@@ -54,6 +54,20 @@ class SinglePositionalTag(tagcon.TemplateTag):
     def render(self, context):
         return '%s' % self.args.single_arg
 
+class NewPositionalTag(tagcon.TemplateTag):
+
+    limit = tagcon.IntegerArg(default=5, positional=True)
+
+    def render(self, context):
+        return '%s' % self.args.limit
+
+class MultipleNewPositionalTag(tagcon.TemplateTag):
+    _ = tagcon.IntegerArg(name="multiplier", default=5)
+
+    limit = tagcon.IntegerArg(default=5, positional=True)
+
+    def render(self, context):
+        return '%s' % (self.args.limit * self.args.multiplier,)
 
 class ArgumentTypeTag(tagcon.TemplateTag):
 
@@ -77,6 +91,8 @@ add_to_builtins(KeywordNoResolve.__module__)
 add_to_builtins(NoArgumentTag.__module__)
 add_to_builtins(SinglePositionalTag.__module__)
 add_to_builtins(ArgumentTypeTag.__module__)
+add_to_builtins(NewPositionalTag.__module__)
+add_to_builtins(MultipleNewPositionalTag.__module__)
 
 render = lambda t: Template(t).render(Context())
 
@@ -87,15 +103,16 @@ class TagExecutionTests(TestCase):
         """A tag with keyword arguments works with or without the argument as
         long as a default value is set"""
 
-        self.assertEqual(Template('{% keyword limit 200 %}').render(Context()),
-                         'The limit is 200')
+        self.assertEqual(render('{% keyword limit 200 %}'), 'The limit is 200')
 
-        self.assertEqual(Template('{% keyword %}').render(Context()),
-                         'The limit is %d' %
+        self.assertEqual(render('{% keyword %}'), 'The limit is %d' %
                          KeywordTag._keyword_args['limit'].default)
 
-        self.assertEqual(Template('{% single_positional 10 %}').render(Context()),
-                         u"10")
+        self.assertEqual(render('{% single_positional 10 %}'), u"10")
+
+        self.assertEqual(render('{% new_positional 10 %}'), u"10")
+
+        self.assertEqual(render('{% multiple_new_positional 10 6 %}'), u"60")
 
         self.assertRaises(tagcon.TemplateTagValidationError,
                           render,
