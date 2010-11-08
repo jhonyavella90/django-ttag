@@ -26,6 +26,12 @@ class TagExecutionTests(TestCase):
                          'The limit is %d' %
                          tags.KeywordTag._keyword_args['limit'].default)
 
+        self.assertEqual(render('{% single_positional 10 %}'), u"10")
+
+        self.assertEqual(render('{% new_positional 10 %}'), u"10")
+
+        self.assertEqual(render('{% multiple_new_positional 10 6 %}'), u"60")
+
 
         self.assertRaises(tagcon.TemplateTagValidationError, render,
                           '{% keyword_no_default %}')

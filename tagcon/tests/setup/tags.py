@@ -30,6 +30,30 @@ class NoArgumentTag(tagcon.TemplateTag):
         return 'No arguments here'
 
 
+class SinglePositionalTag(tagcon.TemplateTag):
+    _ = tagcon.IntegerArg(name="single_arg", default=5)
+
+    def render(self, context):
+        return '%s' % self.args.single_arg
+
+
+class NewPositionalTag(tagcon.TemplateTag):
+
+    limit = tagcon.IntegerArg(default=5, positional=True)
+
+    def render(self, context):
+        return '%s' % self.args.limit
+
+
+class MultipleNewPositionalTag(tagcon.TemplateTag):
+    _ = tagcon.IntegerArg(name="multiplier", default=5)
+
+    limit = tagcon.IntegerArg(default=5, positional=True)
+
+    def render(self, context):
+        return '%s' % (self.args.limit * self.args.multiplier,)
+
+
 class ArgumentTypeTag(tagcon.TemplateTag):
 
     age = tagcon.IntegerArg(null=True)
@@ -45,9 +69,3 @@ class ArgumentTypeTag(tagcon.TemplateTag):
         order = 'name age url date time datetime'.split()
         return ' '.join([str(self.args[x]) for x in order if self.args[x] is not
                          None])
-
-
-register.tag('keyword', KeywordTag)
-register.tag('keyword_no_default', KeywordNoDefaultTag)
-register.tag('no_argument', NoArgumentTag)
-register.tag('argument_type', ArgumentTypeTag)
