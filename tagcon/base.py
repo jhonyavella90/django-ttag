@@ -9,9 +9,9 @@ import weakref
 from django import template
 from django.conf import settings
 
+from tagcon import utils
 from tagcon.args import Arg
 from tagcon.exceptions import TemplateTagArgumentMissing
-from tagcon.utils import smarter_split, get_tag_name, verbose_quantity, unroll_render
 
 __all__ = (
     'TemplateTag',
@@ -45,7 +45,7 @@ def _invalid_template_string(var):
 def _wrap_render(unwrapped_render):
     def render(self, context):
         try:
-            return unroll_render(unwrapped_render(self, context))
+            return utils.unroll_render(unwrapped_render(self, context))
         except template.VariableDoesNotExist, exc:
             if self.silence_errors:
                 return _invalid_template_string(exc.var)
@@ -78,7 +78,7 @@ class TemplateTagBase(type):
             raise TypeError("A valid library is required.")
 
         # use supplied name, or generate one from class name
-        tag_name = getattr(meta, 'name', get_tag_name(name))
+        tag_name = getattr(meta, 'name', utils.get_tag_name(name))
         attrs['name'] = tag_name
 
         attrs['silence_errors'] = getattr(meta, 'silence_errors', False)
@@ -158,7 +158,7 @@ class TemplateTag(template.Node):
         self.parser = weakref.proxy(parser)
         self.args = Arguments()
         self._vars = {}
-        self._raw_args = list(smarter_split(token.contents))[1:]
+        self._raw_args = list(utils.smarter_split(token.contents))[1:]
         # self._raw_args = token.split_contents()[1:]
         self._process_positional_args()
         self._process_keyword_args()
@@ -178,13 +178,13 @@ class TemplateTag(template.Node):
             except IndexError:
                 err_msg = "'%s' takes at least %s" % (
                     self.name,
-                    verbose_quantity('argument', self._positional_args),
+                    utils.verbose_quantity('argument', self._positional_args),
                 )
                 raise template.TemplateSyntaxError(err_msg)
             if isinstance(arg, basestring):
                 if raw_arg != arg:
                     err_msg = "%s argument to '%s' must be '%s'" % (
-                        _ordinal(pos).capitalize(), self.name, name,
+                        utils.ordinal(pos).capitalize(), self.name, name,
                     )
                     raise template.TemplateSyntaxError(err_msg)
             else:
