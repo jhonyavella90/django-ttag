@@ -11,8 +11,8 @@ class KeywordTag(tagcon.TemplateTag):
     limit = tagcon.IntegerArg(default=5)
 
     def render(self, context):
-        self.resolve(context)
-        return 'The limit is %d' % self.args.limit
+        data = data = self.resolve(context)
+        return 'The limit is %d' % data.limit
 
 
 class KeywordNoDefaultTag(tagcon.TemplateTag):
@@ -20,8 +20,8 @@ class KeywordNoDefaultTag(tagcon.TemplateTag):
     limit = tagcon.IntegerArg()
 
     def render(self, context):
-        self.resolve(context)
-        return 'The limit is %d' % self.args.limit
+        data = self.resolve(context)
+        return 'The limit is %d' % data.limit
 
 
 class NoArgumentTag(tagcon.TemplateTag):
@@ -34,7 +34,8 @@ class SinglePositionalTag(tagcon.TemplateTag):
     _ = tagcon.IntegerArg(name="single_arg", default=5)
 
     def render(self, context):
-        return '%s' % self.args.single_arg
+        data = self.resolve(context)
+        return '%s' % data['single_arg']
 
 
 class NewPositionalTag(tagcon.TemplateTag):
@@ -42,7 +43,8 @@ class NewPositionalTag(tagcon.TemplateTag):
     limit = tagcon.IntegerArg(default=5, positional=True)
 
     def render(self, context):
-        return '%s' % self.args.limit
+        data = self.resolve(context)
+        return '%s' % data['limit']
 
 
 class MultipleNewPositionalTag(tagcon.TemplateTag):
@@ -51,7 +53,8 @@ class MultipleNewPositionalTag(tagcon.TemplateTag):
     limit = tagcon.IntegerArg(default=5, positional=True)
 
     def render(self, context):
-        return '%s' % (self.args.limit * self.args.multiplier,)
+        data = self.resolve(context)
+        return '%s' % data['limit'] * data['multiplier']
 
 
 class ArgumentTypeTag(tagcon.TemplateTag):
@@ -65,7 +68,6 @@ class ArgumentTypeTag(tagcon.TemplateTag):
     datetime = tagcon.DateTimeArg(null=True)
 
     def render(self, context):
-        self.resolve(context)
+        data = self.resolve(context)
         order = 'name age url date time datetime'.split()
-        return ' '.join([str(self.args[x]) for x in order if self.args[x] is not
-                         None])
+        return ' '.join([str(data[x]) for x in order if data[x] is not None])

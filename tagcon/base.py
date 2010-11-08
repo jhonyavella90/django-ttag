@@ -4,33 +4,17 @@ tagcon: a template tag constructor library for Django
 Based on the syntax and implementation of Django's Model and Form classes.
 """
 import sys
-import weakref
 
 from django import template
 from django.conf import settings
 
 from tagcon import utils
 from tagcon.args import Arg
-from tagcon.exceptions import TemplateTagArgumentMissing
+from django.template import FilterExpression, TemplateSyntaxError
 
 __all__ = (
     'TemplateTag',
 )
-
-class Arguments(dict):
-    def __getattr__(self, name):
-        if name.endswith('_'):
-            name = name.rstrip('_')
-        return self[name]
-
-    def __getitem__(self, key):
-        try:
-            return dict.__getitem__(self, key)
-        except KeyError:
-            err_msg = "'%s' (Did you forget" \
-            " to call '.resolve(context)'?)" % (key,)
-            raise TemplateTagArgumentMissing(err_msg)
-
 
 def _invalid_template_string(var):
     if settings.TEMPLATE_STRING_IF_INVALID:
@@ -45,6 +29,8 @@ def _invalid_template_string(var):
 def _wrap_render(unwrapped_render):
     def render(self, context):
         try:
+            if self._resolve:
+                self.resolve(context)
             return utils.unroll_render(unwrapped_render(self, context))
         except template.VariableDoesNotExist, exc:
             if self.silence_errors:
@@ -68,7 +54,7 @@ class TemplateTagBase(type):
             meta = attrs.pop('Meta')
         except KeyError:
             meta = None
-        
+
         library = getattr(meta, 'library', None)
         if library:
             if not isinstance(library, template.Library):
@@ -88,6 +74,8 @@ class TemplateTagBase(type):
 
         attrs['block'] = getattr(meta, 'block', False)
 
+        attrs['_resolve'] = getattr(meta, 'resolve', True)
+
         # wrap render so it can optionally yield strings as a generator, and so
         # we can catch exceptions if necessary
         unwrapped_render = attrs.pop('render')
@@ -95,9 +83,13 @@ class TemplateTagBase(type):
 
         # positional tag arguments
         positional_args = attrs.pop('_', [])
-        # shortcut for single-arg case
         if isinstance(positional_args, Arg):
-            positional_args = [positional_args,]
+            # shortcut for single-arg case
+            positional_args = [positional_args]
+        else:
+            # Check that all args are *actually* args.
+            positional_args = [a for a in positional_args
+                               if isinstance(a, Arg)]
 
         for arg in positional_args:
             if isinstance(arg, Arg):
@@ -114,46 +106,32 @@ class TemplateTagBase(type):
             elif not arg:
                 raise ValueError("Empty strings are not valid arguments.")
 
+        keyword_args = {}
+        all_args = {}
+
         # can't use iteritems, since we mutate attrs
         keys = attrs.keys()
         for key in keys:
-            value = attrs[key]
-            if not isinstance(value, Arg):
+            arg = attrs[key]
+            if not isinstance(arg, Arg):
                 continue
-            if getattr(value, 'positional', False):
-                if key in [arg.name for arg in positional_args]:
+            if key.endswith('_'):
+                key = key.rstrip('_')
+            if not arg.name:
+                arg.name = key
+            if arg.positional:
+                if arg.name in [arg.name for arg in positional_args]:
                     raise TypeError(
                         "Positional arg '%s' is defined twice." % key
                     )
-                if not value.name:
-                    value.name = key
-                positional_args.append(value)
-                del attrs[key]
+                positional_args.append(arg)
+            else:
+                arg.keyword = key
+                keyword_args[key] = arg
+            all_args[arg.name] = arg
+            del attrs[key]
 
         attrs['_positional_args'] = positional_args
-        all_args = dict(
-            (arg.name, arg) for arg in positional_args if isinstance(arg, Arg)
-        )
-
-        # keyword tag arguments
-        keyword_args = {}
-        # can't use iteritems, since we mutate attrs
-        keys = attrs.keys()
-        for key in keys:
-            value = attrs[key]
-            if not isinstance(value, Arg):
-                continue
-            del attrs[key]
-            if key.endswith('_'):
-                # hack for reserved names, e.g., "for_" -> "for"; the tag's
-                # .args object understands this, too
-                key = key.rstrip('_')
-            value.keyword = key
-            if not value.name:
-                value.name = key
-            keyword_args[key] = value
-            all_args[value.name] = value
-        # _keyword_args is keyed by *keyword*
         attrs['_keyword_args'] = keyword_args
         # _args and _positional_args are keyed by *arg/var name*
         attrs['_args'] = all_args
@@ -176,18 +154,16 @@ class TemplateTag(template.Node):
 
     def __init__(self, parser, token):
         # don't keep the parser alive
-        self.parser = weakref.proxy(parser)
-        self.args = Arguments()
         self._vars = {}
         self._raw_args = list(utils.smarter_split(token.contents))[1:]
         # self._raw_args = token.split_contents()[1:]
-        self._process_positional_args()
-        self._process_keyword_args()
+        self._process_positional_args(parser)
+        self._process_keyword_args(parser)
         if self.block:
             self.nodelist = parser.parse(('end%s' % (self.name,),))
             parser.delete_first_token()
 
-    def _process_positional_args(self):
+    def _process_positional_args(self, parser):
         for i, arg in enumerate(self._positional_args):
             pos = i + 1
             if isinstance(arg, basestring):
@@ -209,9 +185,9 @@ class TemplateTag(template.Node):
                     )
                     raise template.TemplateSyntaxError(err_msg)
             else:
-                self._set_var(arg, raw_arg)
+                self._set_var(arg, raw_arg, parser)
 
-    def _process_keyword_args(self):
+    def _process_keyword_args(self, parser):
         while self._raw_args:
             keyword = self._raw_args.pop(0)
             try:
@@ -222,7 +198,7 @@ class TemplateTag(template.Node):
                 )
                 raise template.TemplateSyntaxError(err_msg)
             if arg.flag:
-                self._set_var(arg, True)
+                self._set_var(arg, True, parser)
                 continue
             try:
                 value = self._raw_args.pop(0)
@@ -232,45 +208,42 @@ class TemplateTag(template.Node):
                     self.name,
                 )
                 raise template.TemplateSyntaxError(err_msg)
-            self._set_var(arg, value)
+            self._set_var(arg, value, parser)
         # handle missing items: required, default, flag
         for keyword, arg in self._keyword_args.iteritems():
             if arg.name in self._vars:
                 continue
             if arg.flag:
-                self._set_var(arg, False)
+                self._set_var(arg, False, parser)
                 continue
             if arg.required:
                 err_msg = "'%s' argument to '%s' is required" % (
                     keyword, self.name,
                 )
                 raise template.TemplateSyntaxError(err_msg)
-            self._set_var(arg, arg.default)
+            self._set_var(arg, arg.default, parser)
 
-    def _compile_filter(self, arg, value):
+    def _compile_filter(self, arg, value, parser):
         if not arg.resolve:
             return value
-        return template.FilterExpression(value, self.parser)
+        return template.FilterExpression(value, parser)
 
-    def _set_var(self, arg, value):
+    def _set_var(self, arg, value, parser):
         if value and isinstance(value, (list, tuple)):
-            self._vars[arg.name] = [
-                self._compile_filter(arg, v) for v in value
-            ]
-            return
-        if not isinstance(value, basestring):
-            # non-string default value; short-circuit as FilterExpression can
-            # only handle strings
-            self._vars[arg.name] = value
-            return
-        self._vars[arg.name] = self._compile_filter(arg, value)
+            value = [self._compile_filter(arg, v, parser) for v in value]
+        elif isinstance(value, basestring):
+            value = self._compile_filter(arg, value, parser)
+        else:
+            if not isinstance(value, FilterExpression):
+                raise TemplateSyntaxError('Could not compile argument value.')
+        self._vars[arg.name] = value
 
-    def clean(self):
+    def clean(self, data):
         """
         Additional tag-wide argument cleaning after each individual Arg's
         ``clean`` has been called.
         """
-        return
+        return data
 
     def render(self, context):
         raise NotImplementedError(
@@ -296,7 +269,8 @@ class TemplateTag(template.Node):
 
     def resolve(self, context):
         """
-        Resolve variables and run clean methods.
+        Resolve variables and run clean methods, returning a dictionary
+        containing the cleaned data.
 
         Cleaning happens after variable/filter resolution.
 
@@ -306,6 +280,7 @@ class TemplateTag(template.Node):
         2) The tag's ``clean_ARGNAME()`` method, if any.
         3) The tag's ``.clean()`` method.
         """
+        data = {}
         for k, v in self._vars.iteritems():
             if isinstance(v, (list, tuple)):
                 v = [self._resolve_single(context, x) for x in v]
@@ -314,10 +289,11 @@ class TemplateTag(template.Node):
             arg = self._args[k]
             v = arg.base_clean(v)
             try:
-                tag_arg_clean = getattr(self, 'clean_%s' % (arg.name,))
+                tag_arg_clean = getattr(self, 'clean_%s' % arg.name)
             except AttributeError:
                 pass
             else:
                 v = tag_arg_clean(v)
-            self.args[k] = v
-        self.clean()
+            data[k] = v
+        data = self.clean(data)
+        return data
