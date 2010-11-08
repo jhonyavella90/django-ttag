@@ -1,5 +1,5 @@
 import datetime
-from tagcon.exceptions import TemplateTagValidationError, TemplateTagArgumentMissing
+from tagcon.exceptions import TemplateTagValidationError
 
 __all__ = (
     'Arg',
@@ -84,7 +84,7 @@ class IntegerArg(Arg):
     def clean(self, value):
         try:
             value = int(value)
-        except (TypeError, ValueError), exc:
+        except (TypeError, ValueError):
             raise TemplateTagValidationError(
                 "Value for '%s' must be an integer (got %r)" % (
                     self.name,

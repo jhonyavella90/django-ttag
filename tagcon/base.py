@@ -10,7 +10,7 @@ from django import template
 from django.conf import settings
 
 from tagcon.args import Arg
-from tagcon.exceptions import TemplateTagValidationError, TemplateTagArgumentMissing
+from tagcon.exceptions import TemplateTagArgumentMissing
 from tagcon.utils import smarter_split, get_tag_name, verbose_quantity, unroll_render
 
 __all__ = (
