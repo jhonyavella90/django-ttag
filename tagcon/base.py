@@ -68,14 +68,17 @@ class TemplateTagBase(type):
             meta = attrs.pop('Meta')
         except KeyError:
             meta = None
-        try:
-            library = meta.library
-        except AttributeError:
+        
+        library = getattr(meta, 'library', None)
+        if library:
+            if not isinstance(library, template.Library):
+                raise TypeError("A valid library is required.")
+        else:
             # try auto-lookup
             module = sys.modules[attrs['__module__']]
-            library = getattr(module, 'register', None)
-        if not isinstance(library, template.Library):
-            raise TypeError("A valid library is required.")
+            module_library = getattr(module, 'register', None)
+            if isinstance(module_library, template.Library):
+                library = module_library
 
         # use supplied name, or generate one from class name
         tag_name = getattr(meta, 'name', utils.get_tag_name(name))
@@ -141,8 +144,9 @@ class TemplateTagBase(type):
         # create the new class
         new_class = super_new(cls, name, bases, attrs)
 
-        # register the tag
-        library.tag(tag_name, new_class)
+        # register the tag if a tag library was provided
+        if library:
+            library.tag(tag_name, new_class)
 
         return new_class
 
