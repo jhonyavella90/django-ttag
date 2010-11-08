@@ -1,8 +1,9 @@
-from django.template import Library
+from django import template
 
 import tagcon
+from tagcon.tests.setup import models
 
-register = Library()
+register = template.Library()
 
 
 class KeywordTag(tagcon.TemplateTag):
@@ -33,8 +34,8 @@ class ArgumentTypeTag(tagcon.TemplateTag):
 
     age = tagcon.IntegerArg(null=True)
     name_ = tagcon.StringArg(null=True)
-    url = tagcon.ModelInstanceArg(model=Link, required=False,
-                                        null=True)
+    url = tagcon.ModelInstanceArg(model=models.Link, required=False,
+                                  null=True)
     date = tagcon.DateArg(null=True)
     time = tagcon.TimeArg(null=True)
     datetime = tagcon.DateTimeArg(null=True)
@@ -45,6 +46,8 @@ class ArgumentTypeTag(tagcon.TemplateTag):
         return ' '.join([str(self.args[x]) for x in order if self.args[x] is not
                          None])
 
-add_to_builtins(KeywordTag.__module__)
-add_to_builtins(NoArgumentTag.__module__)
-add_to_builtins(ArgumentTypeTag.__module__)
+
+register.tag('keyword', KeywordTag)
+register.tag('keyword_no_default', KeywordNoDefaultTag)
+register.tag('no_argument', NoArgumentTag)
+register.tag('argument_type', ArgumentTypeTag)
