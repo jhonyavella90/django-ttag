@@ -43,7 +43,7 @@ class Arg(object):
     ``required`` and ``default``)
     """
     def __init__(self, name=None, required=False, default=None, null=False,
-                 resolve=True, multi=False, flag=False):
+                 resolve=True, multi=False, flag=False, positional=False):
         self.name = name
         self.required = required
         self.default = default
@@ -52,6 +52,7 @@ class Arg(object):
         self.multi = multi
         self.keyword = None
         self.flag = flag
+        self.positional = positional
 
     def base_clean(self, value):
         """

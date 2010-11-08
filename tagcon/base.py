@@ -98,10 +98,11 @@ class TemplateTagBase(type):
         attrs['render'] = _wrap_render(unwrapped_render)
 
         # positional tag arguments
-        positional_args = attrs.pop('_', ())
+        positional_args = attrs.pop('_', [])
         # shortcut for single-arg case
         if isinstance(positional_args, Arg):
-            positional_args = (positional_args,)
+            positional_args = [positional_args,]
+
         for arg in positional_args:
             if isinstance(arg, Arg):
                 if not arg.name:
@@ -112,10 +113,27 @@ class TemplateTagBase(type):
                 arg.required = True
             elif not isinstance(arg, basestring):
                 raise TypeError(
-                    "positional args must be Arg instances or strings"
+                    "Positional args must be Arg instances or strings"
                 )
             elif not arg:
                 raise ValueError("Empty strings are not valid arguments.")
+
+        # can't use iteritems, since we mutate attrs
+        keys = attrs.keys()
+        for key in keys:
+            value = attrs[key]
+            if not isinstance(value, Arg):
+                continue
+            if getattr(value, 'positional', False):
+                if key in [arg.name for arg in positional_args]:
+                    raise TypeError(
+                        "Positional arg '%s' is defined twice." % key
+                    )
+                if not value.name:
+                    value.name = key
+                positional_args.append(value)
+                del attrs[key]
+
         attrs['_positional_args'] = positional_args
         all_args = dict(
             (arg.name, arg) for arg in positional_args if isinstance(arg, Arg)
