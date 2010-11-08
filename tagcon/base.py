@@ -3,42 +3,19 @@ tagcon: a template tag constructor library for Django
 
 Based on the syntax and implementation of Django's Model and Form classes.
 """
-from __future__ import absolute_import
-
-import datetime
-import re
 import sys
 import weakref
 
 from django import template
 from django.conf import settings
-from django.utils.encoding import force_unicode
 
+from tagcon.args import Arg
+from tagcon.exceptions import TemplateTagValidationError, TemplateTagArgumentMissing
+from tagcon.utils import smarter_split, get_tag_name, verbose_quantity, unroll_render
 
 __all__ = (
-    'Arg',
-    'DateArg',
-    'DateTimeArg',
-    'IntegerArg',
-    'ModelInstanceArg',
-    'StringArg',
     'TemplateTag',
-    'TemplateTagArgumentMissing',
-    'TemplateTagValidationError',
-    'TimeArg',
 )
-
-
-class TemplateTagValidationError(template.TemplateSyntaxError):
-    pass
-
-
-class TemplateTagArgumentMissing(KeyError):
-    pass
-    # # exceptions use __str__, not __unicode__ or __repr__
-    # def __str__(self):
-    #     return self.args[0]
-
 
 class Arguments(dict):
     def __getattr__(self, name):
@@ -55,103 +32,6 @@ class Arguments(dict):
             raise TemplateTagArgumentMissing(err_msg)
 
 
-_split_single = r"""
-    ([^\s",]*"(?:[^"\\]*(?:\\.[^"\\]*)*)"[^\s,]*|
-     [^\s',]*'(?:[^'\\]*(?:\\.[^'\\]*)*)'[^\s,]*|
-     [^\s,]+)
-"""
-_split_multi = r"""%s(?:\s*,\s*%s)*""" % (_split_single, _split_single)
-_split_single_re = re.compile(_split_single, re.VERBOSE)
-_split_multi_re = re.compile(_split_multi, re.VERBOSE)
-
-def _smarter_split(input):
-    input = force_unicode(input)
-    for multi_match in _split_multi_re.finditer(input):
-        hit = []
-        for single_match in _split_single_re.finditer(multi_match.group(0)):
-            hit.append(single_match.group(0))
-        if len(hit) == 1:
-            yield hit[0]
-        else:
-            yield hit
-
-
-CLASS_NAME_RE = re.compile(r'(((?<=[a-z])[A-Z])|([A-Z](?![A-Z]|$)))')
-def _get_tag_name(class_name):
-    name = CLASS_NAME_RE.sub(r'_\1', class_name).lower().strip('_')
-    if name.endswith('_tag'):
-        name = name[:-4]
-    return name
-
-
-def _cardinal(n):
-    """
-    Return the cardinal number for an integer.
-
-    Returns words (e.g., "one") for 0 through 10; returns digits for numbers
-    greater than 10.
-
-    TODO: check usage guide to decide if 9 or 10 should be the cutoff.
-    """
-    n = int(n)
-    if n < 0:
-        raise ValueError("Argument must be >= 0")
-    try:
-        return (u'zero', u'one', u'two', u'three', u'four', u'five',
-                u'six', u'seven', u'eight', u'nine', u'ten')[n]
-    except IndexError:
-        return unicode(n)
-
-
-def _ordinal(n):
-    """
-    Return the ordinal number for an integer.
-
-    Differs from the humanize version as it returns full words (e.g., "first")
-    for 1 through 9, and does not work for numbers less than 1.
-    """
-    n = int(n)
-    if n < 1:
-        raise ValueError("Argument must be >= 1")
-    try:
-        return (u'first', u'second', u'third', u'fourth', u'fifth', u'sixth',
-                u'seventh', u'eighth', u'ninth')[n-1]
-    except IndexError:
-        t = ('th', 'st', 'nd', 'rd') + (('th',) * 6)
-        if n % 100 in (11, 12, 13):
-            return u"%d%s" % (n, t[0])
-        return u'%d%s' % (n, t[n % 10])
-
-
-def _pluralize(singular, quantity, suffix='s'):
-    if quantity == 1:
-        return singular
-    return '%s%s' % (singular, suffix)
-
-
-def _verbose_quantity(singular, quantity, suffix='s'):
-    try:
-        quantity = int(quantity)
-    except TypeError:
-        try:
-            quantity = len(quantity)
-        except TypeError:
-            raise TypeError("Quantity must be an integer or sequence.")
-    return '%s %s' % (
-        _cardinal(quantity),
-        _pluralize(singular, quantity, suffix=suffix),
-    )
-
-
-def _unroll_render(s):
-    if s is None:
-        err_msg = "'render' must return a string or an iterable (got None)"
-        raise TypeError(err_msg)
-    if isinstance(s, basestring):
-        return s
-    return ''.join(unicode(piece) for piece in s)
-
-
 def _invalid_template_string(var):
     if settings.TEMPLATE_STRING_IF_INVALID:
         if template.invalid_var_format_string is None:
@@ -165,7 +45,7 @@ def _invalid_template_string(var):
 def _wrap_render(unwrapped_render):
     def render(self, context):
         try:
-            return _unroll_render(unwrapped_render(self, context))
+            return unroll_render(unwrapped_render(self, context))
         except template.VariableDoesNotExist, exc:
             if self.silence_errors:
                 return _invalid_template_string(exc.var)
@@ -198,7 +78,7 @@ class TemplateTagBase(type):
             raise TypeError("A valid library is required.")
 
         # use supplied name, or generate one from class name
-        tag_name = getattr(meta, 'name', _get_tag_name(name))
+        tag_name = getattr(meta, 'name', get_tag_name(name))
         attrs['name'] = tag_name
 
         attrs['silence_errors'] = getattr(meta, 'silence_errors', False)
@@ -278,7 +158,7 @@ class TemplateTag(template.Node):
         self.parser = weakref.proxy(parser)
         self.args = Arguments()
         self._vars = {}
-        self._raw_args = list(_smarter_split(token.contents))[1:]
+        self._raw_args = list(smarter_split(token.contents))[1:]
         # self._raw_args = token.split_contents()[1:]
         self._process_positional_args()
         self._process_keyword_args()
@@ -298,7 +178,7 @@ class TemplateTag(template.Node):
             except IndexError:
                 err_msg = "'%s' takes at least %s" % (
                     self.name,
-                    _verbose_quantity('argument', self._positional_args),
+                    verbose_quantity('argument', self._positional_args),
                 )
                 raise template.TemplateSyntaxError(err_msg)
             if isinstance(arg, basestring):
@@ -420,155 +300,3 @@ class TemplateTag(template.Node):
                 v = tag_arg_clean(v)
             self.args[k] = v
         self.clean()
-
-
-class Arg(object):
-    """
-    A template tag argument.
-
-    ``name`` is the variable name, and is required if the argument is
-    positional; otherwise it will use the keyword name by default.  This is
-    *not* the keyword name (i.e., the name used in the tag iself).
-
-    ``required`` and ``default`` are mutually exclusive, and only apply to
-    keyword arguments; a positional argument is implicitly required.
-
-    ``null`` determines whether a value of ``None`` can bypass validation via
-    the argument's ``clean`` method; if ``null`` is false, a ``None`` value
-    will simply be passed to ``clean`` normally.  (This will only apply if
-    ``required`` is false and ``default`` is None.)
-
-    ``resolve`` determines whether a non-literal string (i.e., not surrounded
-    in quotes) will be resolved as a variable; if false, it will be interpreted
-    as a string.
-
-    ``multi`` determines if the argument's value may consist of multiple
-    comma-separated items (which would each be resolved, or not, according to
-    the value of ``resolve``).
-
-    ``flag`` denotes a keyword argument that does *not* have a separate value;
-    its value is true if they keyword is given, and false otherwise.
-
-    TODO: raise an error on various invalid option combinations (e.g.,
-    ``required`` and ``default``)
-    """
-    def __init__(self, name=None, required=False, default=None, null=False,
-                 resolve=True, multi=False, flag=False):
-        self.name = name
-        self.required = required
-        self.default = default
-        self.null = null
-        self.resolve = resolve
-        self.multi = multi
-        self.keyword = None
-        self.flag = flag
-
-    def base_clean(self, value):
-        """
-        Validation that always takes place.
-
-        Don't override me; override ``clean`` instead.
-        """
-        if not self.multi and isinstance(value, (list, tuple)):
-            err_msg = "Value for '%s' must be a single item." % (self.name,)
-            raise TemplateTagValidationError(err_msg)
-        if value is not None or not self.null:
-            value = self.clean(value)
-        return value
-
-    def clean(self, value):
-        """
-        Validate the argument value.
-
-        Subclasses should perform any munging here, raising
-        ``TemplateTagValidationError`` as necessary.
-
-        Filters are applied *before* ``clean`` is called.
-
-        Note: if ``self.null`` is true, this will never get called.
-        """
-        return value
-
-
-class IntegerArg(Arg):
-    def clean(self, value):
-        try:
-            value = int(value)
-        except (TypeError, ValueError), exc:
-            raise TemplateTagValidationError(
-                "Value for '%s' must be an integer (got %r)" % (
-                    self.name,
-                    value
-                )
-            )
-        return value
-
-
-class StringArg(Arg):
-    def clean(self, value):
-        if not isinstance(value, basestring):
-            raise TemplateTagValidationError(
-                "Value for '%s' must be a string" % (
-                    self.name,
-                )
-            )
-        return value
-
-
-class DateTimeArg(Arg):
-    def clean(self, value):
-        if not isinstance(value, datetime.datetime):
-            raise TemplateTagValidationError(
-                "Value for '%s' must be a datetime instance" % (
-                    self.name,
-                )
-            )
-        return value
-
-
-class DateArg(Arg):
-    def clean(self, value):
-        if not isinstance(value, datetime.date):
-            raise TemplateTagValidationError(
-                "Value for '%s' must be a date instance" % (
-                    self.name,
-                )
-            )
-        return value
-
-
-class TimeArg(Arg):
-    def clean(self, value):
-        if not isinstance(value, datetime.time):
-            raise TemplateTagValidationError(
-                "Value for '%s' must be a time instance" % (
-                    self.name,
-                )
-            )
-        return value
-
-
-class ModelInstanceArg(Arg):
-    def __init__(self, *args, **kwargs):
-        from django.db import models
-        try:
-            model = kwargs.pop('model')
-        except KeyError:
-            err_msg = "A 'model' keyword argument is required"
-            raise TypeError(err_msg)
-        if not issubclass(model, models.Model):
-            err_msg = "'model' must be a Model subclass"
-            raise TypeError(err_msg)
-        self.model_class = model
-        super(ModelInstanceArg, self).__init__(*args, **kwargs)
-
-    def clean(self, value):
-        if not isinstance(value, self.model_class):
-            raise TemplateTagValidationError(
-                "Value for '%s' must be an instance of %s.%s" % (
-                    self.name,
-                    self.model_class.__module__,
-                    self.model_class.__name__,
-                )
-            )
-        return value
