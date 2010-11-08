@@ -51,20 +51,19 @@ Example
 
 A simple example with a single optional argument::
 
+    from django import template
     from django.contrib.auth.models import User
-    from django.template import Library
     import tagcon
 
-    register = Library()
+    register = template.Library()
 
     class UserListTag(tagcon.TemplateTag):
         limit = tagcon.IntegerArg(default=10)
 
-        def render(self, context):
-            self.resolve(context)
+        def output(self, data):
             yield "<ul>"
-            for user in User.objects.all()[:self.args.limit]:
-                yield "<li>%s</li>" % (user.username,)
+            for user in User.objects.all()[:data['limit']]:
+                yield "<li>%s</li>" % user.username
             yield "</ul>"
 
 And then, in a template (after loading the library)::

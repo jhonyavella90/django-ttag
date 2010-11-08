@@ -23,11 +23,6 @@ class Arg(object):
     ``required`` and ``default`` are mutually exclusive, and only apply to
     keyword arguments; a positional argument is implicitly required.
 
-    ``null`` determines whether a value of ``None`` can bypass validation via
-    the argument's ``clean`` method; if ``null`` is false, a ``None`` value
-    will simply be passed to ``clean`` normally.  (This will only apply if
-    ``required`` is false and ``default`` is None.)
-
     ``resolve`` determines whether a non-literal string (i.e., not surrounded
     in quotes) will be resolved as a variable; if false, it will be interpreted
     as a string.
@@ -38,16 +33,13 @@ class Arg(object):
 
     ``flag`` denotes a keyword argument that does *not* have a separate value;
     its value is true if they keyword is given, and false otherwise.
-
-    TODO: raise an error on various invalid option combinations (e.g.,
-    ``required`` and ``default``)
     """
-    def __init__(self, name=None, required=False, default=None, null=False,
-                 resolve=True, multi=False, flag=False, positional=False):
+
+    def __init__(self, name=None, required=True, default=None, resolve=True,
+                 multi=False, flag=False, positional=False):
         self.name = name
         self.required = required
         self.default = default
-        self.null = null
         self.resolve = resolve
         self.multi = multi
         self.keyword = None
@@ -63,9 +55,7 @@ class Arg(object):
         if not self.multi and isinstance(value, (list, tuple)):
             err_msg = "Value for '%s' must be a single item." % (self.name,)
             raise TemplateTagValidationError(err_msg)
-        if value is not None or not self.null:
-            value = self.clean(value)
-        return value
+        return self.clean(value)
 
     def clean(self, value):
         """
@@ -75,49 +65,61 @@ class Arg(object):
         ``TemplateTagValidationError`` as necessary.
 
         Filters are applied *before* ``clean`` is called.
-
-        Note: if ``self.null`` is true, this will never get called.
         """
         return value
 
 
 class IntegerArg(Arg):
+
     def clean(self, value):
         try:
             value = int(value)
         except (TypeError, ValueError):
             raise TemplateTagValidationError(
-                "Value for '%s' must be an integer (got %r)" % (
-                    self.name,
-                    value
-                )
+                "Value for '%s' must be an integer (got %r)" % (self.name,
+                                                                value)
             )
         return value
 
 
 class StringArg(Arg):
+
     def clean(self, value):
         if not isinstance(value, basestring):
             raise TemplateTagValidationError(
-                "Value for '%s' must be a string" % (
-                    self.name,
-                )
+                "Value for '%s' must be a string" % self.name
+            )
+        return value
+
+
+class ConstantArg(Arg):
+
+    def __init__(self, *args, **kwargs):
+        super(ConstantArg, self).__init__(*args, **kwargs)
+        self.positional = True
+        self.resolve = False
+
+    def clean(self, value):
+        if value != self.keyword:
+            raise TemplateTagValidationError(
+                "Expected constant value '%s' (received '%s')" % (self.keyword,
+                                                                  value)
             )
         return value
 
 
 class DateTimeArg(Arg):
+
     def clean(self, value):
         if not isinstance(value, datetime.datetime):
             raise TemplateTagValidationError(
-                "Value for '%s' must be a datetime instance" % (
-                    self.name,
-                )
+                "Value for '%s' must be a datetime instance" % self.name
             )
         return value
 
 
 class DateArg(Arg):
+
     def clean(self, value):
         if not isinstance(value, datetime.date):
             raise TemplateTagValidationError(
@@ -129,17 +131,17 @@ class DateArg(Arg):
 
 
 class TimeArg(Arg):
+
     def clean(self, value):
         if not isinstance(value, datetime.time):
             raise TemplateTagValidationError(
-                "Value for '%s' must be a time instance" % (
-                    self.name,
-                )
+                "Value for '%s' must be a time instance" % self.name
             )
         return value
 
 
 class ModelInstanceArg(Arg):
+
     def __init__(self, *args, **kwargs):
         from django.db import models
         try:

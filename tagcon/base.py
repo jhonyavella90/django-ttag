@@ -153,7 +153,6 @@ class TemplateTag(template.Node):
     __metaclass__ = TemplateTagBase
 
     def __init__(self, parser, token):
-        # don't keep the parser alive
         self._vars = {}
         self._raw_args = list(utils.smarter_split(token.contents))[1:]
         # self._raw_args = token.split_contents()[1:]
@@ -216,12 +215,15 @@ class TemplateTag(template.Node):
             if arg.flag:
                 self._set_var(arg, False, parser)
                 continue
-            if arg.required:
-                err_msg = "'%s' argument to '%s' is required" % (
-                    keyword, self.name,
-                )
-                raise template.TemplateSyntaxError(err_msg)
-            self._set_var(arg, arg.default, parser)
+            if arg.default is None:
+                if arg.required:
+                    raise template.TemplateSyntaxError(
+                        "'%s' argument to '%s' is required" % (keyword, self.name)
+                    )
+                # Non-required arguments with no default are not
+                # added to the vars dictionary.
+            else:
+                self._set_var(arg, arg.default, parser)
 
     def _compile_filter(self, arg, value, parser):
         if not arg.resolve:
@@ -246,6 +248,13 @@ class TemplateTag(template.Node):
         return data
 
     def render(self, context):
+        """
+        Render the tag.
+        """
+        data = self.resolve(context)
+        return self.output(data)
+
+    def output(self, data):
         raise NotImplementedError(
             "TemplateTag subclasses must implement this method."
         )
