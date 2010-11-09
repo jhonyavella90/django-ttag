@@ -6,6 +6,5 @@ if sys.version_info[0] != 2 or sys.version_info[1] < 5:
 del sys
 
 from tagcon.base import TemplateTag
-from tagcon.exceptions import TemplateTagArgumentMissing, TemplateTagValidationError
-from tagcon.args import Arg, DateArg, DateTimeArg, IntegerArg, \
-    ModelInstanceArg, StringArg, TimeArg
+from tagcon.exceptions import *
+from tagcon.args import *

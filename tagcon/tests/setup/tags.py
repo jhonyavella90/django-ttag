@@ -35,27 +35,27 @@ class PositionalTag(tagcon.TemplateTag):
         return '%s' % data['limit']
 
 
-class MultiplePositionalTag(tagcon.TemplateTag):
-    _ = tagcon.IntegerArg(name="multiplier", default=5)
-
+class PositionalMixedTag(tagcon.TemplateTag):
     limit = tagcon.IntegerArg(default=5, positional=True)
+    as_ = tagcon.BasicArg()
 
-    def output(self, data):
-        return '%s' % data['limit'] * data['multiplier']
+    def render(self, context):
+        data = self.resolve(context)
+        context[data['as']] = data['limit']
+        return ''
 
 
 class ArgumentTypeTag(tagcon.TemplateTag):
-    age = tagcon.IntegerArg(null=True)
-    name_ = tagcon.StringArg(null=True)
-    url = tagcon.ModelInstanceArg(model=models.Link, required=False,
-                                  null=True)
-    date = tagcon.DateArg(null=True)
-    time = tagcon.TimeArg(null=True)
-    datetime = tagcon.DateTimeArg(null=True)
+    age = tagcon.IntegerArg(required=False)
+    name_ = tagcon.StringArg(required=False)
+    url = tagcon.ModelInstanceArg(model=models.Link, required=False)
+    date = tagcon.DateArg(required=False)
+    time = tagcon.TimeArg(required=False)
+    datetime = tagcon.DateTimeArg(required=False)
 
     def output(self, data):
         order = 'name age url date time datetime'.split()
-        return ' '.join([str(data[x]) for x in order if data[x] is not None])
+        return ' '.join([str(data[x]) for x in order if x in data])
 
 
 class ConstantTag(tagcon.TemplateTag):

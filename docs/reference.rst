@@ -24,18 +24,20 @@ TemplateTag
 
 A minimal ``TemplateTag`` might look like this::
 
-    from django.template import Library
+    from django import template
     import tagcon
 
-    register = Library()
+    register = template.Library()
+
 
     class CustomTag(tagcon.TemplateTag):
-        def render(self, context):
+
+        def output(self, data):
             return "Hi there!"
 
-This would create a tag ``{% custom %}`` which took no arguments and rendered
+This would create a tag ``{% custom %}`` which took no arguments and output
 ``Hi there!``.  Tag naming is automatically based off of the class name, but
-can be overridden (see the ``Meta`` options below).  The library can likewise
+can be overridden (see the `Meta options`_ below).  The library can likewise
 be explicitly specified, but in most cases automatically using the module's
 ``register`` library will do what is wanted anyway.
 
@@ -46,10 +48,11 @@ Meta options
 A ``TemplateTag`` can take various options via a ``Meta`` inner class::
 
     class FoobarTag(tagcon.TemplateTag):
+
         class Meta:
             name = "special"
 
-        def render(self, context):
+        def output(self, data):
             return "Yes, I'm special."
 
 This would create a tag ``{% special %}``, rather than ``{% foobar %}``.
@@ -71,9 +74,15 @@ name and converting it from CamelCase to under_score format, with any trailing
 library
 ~~~~~~~
 
-Explicitly specify a library to register this tag with.  As long as the tag is
-defined in a normal tag module with a ``register = Library()`` line, this
-shouldn't be necessary.
+Explicitly specify a tag library to register this tag with.  As long as the tag
+is defined in a normal tag module with a ``register = template.Library()``
+line, this shouldn't be necessary.
+
+If the module doesn't contain a tag library named ``register`` and a library is
+not explicitly specified, the tag can still be explicitly registered using the
+standard library ``register`` method::
+
+    my_tag_library.register(MyTag.name, MyTag) 
 
 
 silence_errors
@@ -84,35 +93,76 @@ Whether to ignore exceptions raised by the tag, returning the settings'
 at the moment, although this may change.
 
 
+output
+------
+
+If your tag does not modify the output, override this method to 
+
+Either this method or the ``render`` method must be overridden on
+``TemplateTag`` subclasses.
+
 render
 ------
 
-A ``render`` method must be added to any ``TemplateTag`` subclass, and takes a
-template ``context`` as a required argument.  This is where the logic for your
-tag would typically take place.  ``render`` must return a string *or* yield
-strings as a generator.  If your tag doesn't return anything (e.g., it only
-manipulates the context), ``render`` can simply return an empty string.
+As an alternative to overriding the ``output`` method, a ``TemplateTag``
+subclass may directly override the ``render`` method. This is useful for
+when you want to alter the context.
 
-Yielding strings from ``render`` (using ``yield``) will work just as if those
-strings were joined without separators (e.g., via ``''.join``) before being
-returned; the tag will join the output for you automatically.
+This method takes a template ``context`` as a required argument.
 
-To use the values of the tag's arguments, if any, you must first call the
-following method inside ``render``::
+``render`` must return a unicode string.
+If your tag doesn't return anything (e.g., it only manipulates the context),
+``render`` can simply return an empty string.
 
-    self.resolve(context)
+To retrieve the values of the tag's arguments, if any, use the following method
+inside ``render``::
 
-This will perform any context resolution if necessary, and populate the tag's
-``args`` dictionary with the values of the tag's arguments.  ``args`` is a
-special dictionary that also allows key lookup via attribute access, e.g.,
-``self.args.somevar`` is the same as ``self.args['somevar']``.
+    data = self.resolve(context)
+
+This will perform any context resolution if necessary, and return a data
+dictionary containing the values of the tag's arguments.
 
 
 Arguments
 ---------
 
-Arguments can be either positional or keyword.
+Arguments can be either positional or keyword. They are specified as properties
+of the tag class, in a similar way to Django's forms and models.
 
+If the property name clashes with a append a trailing slash - it will be
+removed from the argument's ``name``. For example, pay attention to the ``as_``
+argument in the tag below::
+
+    class SetTag(tagcon.TemplateTag):
+        value = tagcon.Arg(positional=True)
+        as_ = tagcon.StringArg()
+        
+        def render(context):
+            data = self.resolve(context)
+            as_var = data['as']
+            context[as_var] = data['value']
+            return ''
+
+Positional arguments
+~~~~~~~~~~~~~~~~~~~~
+
+An argument may be marked as positional by using the ``positional`` flag::  
+
+    class PositionalTag(tagcon.TemplateTag):
+        first = tagcon.Arg(positional=True)
+        second = tagcon.Arg(positional=True)
+
+This would result in a tag named ``positional`` which took two required
+arguments, which would be assigned to ``'first'`` and ``'second'`` items
+of the data dictionary returned by the ``resolve`` method.
+
+Use the ``ConstantArg`` for simple required string-based arguments which assist
+readability (this Arg assumes ``positional=True``)::
+
+    class MeasureTag(tagcon.TemplateTag):
+        start = tagcon.Arg(positional=True)
+        to = tagcon.ConstantArg()
+        finish = tagcon.Arg(positional=True)
 
 Keyword arguments
 ~~~~~~~~~~~~~~~~~
@@ -121,8 +171,8 @@ Keyword arguments can appear in any order in a tag's arguments, after the
 positional arguments.  They are specified as follows::
 
     class KeywordTag(tagcon.TemplateTag):
-        limit = tagcon.Arg()
-        offset = tagcon.Arg()
+        limit = tagcon.Arg(required=False)
+        offset = tagcon.Arg(required=False)
 
 This would create a tag named ``keyword`` which took two optional arguments,
 ``limit`` and ``offset``.  They could be specified in any order::
@@ -137,57 +187,13 @@ This would create a tag named ``keyword`` which took two optional arguments,
 
     {% keyword offset 4 limit 12 %}
 
-The values for arguments are available in the tag's ``args`` attribute after
-``self.resolve(context)`` is called in ``render``.  In the above example,
-``self.args.limit`` would have the value of the ``limit`` argument, and
-``self.args.offset`` would have the value of ``offset``; if either was not
-given, the value would be ``None``.  (Default values can be changed; see the
-Args section below.)
+If an optional argument is not specified in the template, it will not be
+added to the data dictionary. Alternately, use ``default`` to have a default
+value added to the data dictionary if an argument is not provided::
 
-
-Positional arguments
-~~~~~~~~~~~~~~~~~~~~
-
-Positional arguments are given via a single underscore, like this::
-
-    class PositionalTag(tagcon.TemplateTag):
-        _ = (
-            tagcon.Arg('first'),
-            tagcon.Arg(name='second'),
-        )
-
-This would result in a tag named ``positional`` which took two required
-arguments, which would be assigned to ``self.args.first`` and
-``self.args.second`` after ``resolve`` is called.
-
-Positional arguments *must* take a ``name`` argument, as they do not have a
-keyword to create the variable name from.  (``name`` is the first argument to
-``Arg``, so the keyword can be omitted as shown with ``first`` above.)
-
-Positional arguments can also take required strings for readability's sake::
-
-    class RangeTag(tagcon.TemplateTag):
-        _ = (
-            tagcon.Arg('start'),
-            'to',
-            tagcon.Arg('finish'),
-        )
-
-This would create a tag named ``range`` which would take three arguments, the
-second of which must be the string ``to``.
-
-If only a single positional argument is present, it can be written like this::
-
-    class SinglePositionalArgTag(tagcon.TemplateTag):
-        _ = tagcon.Arg('onlyarg')
-
-This is the same as specifying::
-
-    class SinglePositionalArgTag(tagcon.TemplateTag):
-        _ = (
-            tagcon.Arg('onlyarg'),
-        )
-
+    class KeywordTag(tagcon.TemplateTag):
+        limit = tagcon.Arg(default=100)
+        offset = tagcon.Arg(required=False)
 
 Arg
 ===

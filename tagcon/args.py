@@ -1,70 +1,103 @@
 import datetime
+from django.template import TemplateSyntaxError, FilterExpression
 from tagcon.exceptions import TemplateTagValidationError
-
-__all__ = (
-    'Arg',
-    'DateArg',
-    'DateTimeArg',
-    'IntegerArg',
-    'ModelInstanceArg',
-    'StringArg',
-    'TimeArg',
-)
 
 
 class Arg(object):
     """
     A template tag argument.
-
-    ``name`` is the variable name, and is required if the argument is
-    positional; otherwise it will use the keyword name by default.  This is
-    *not* the keyword name (i.e., the name used in the tag iself).
-
-    ``required`` and ``default`` are mutually exclusive, and only apply to
-    keyword arguments; a positional argument is implicitly required.
-
-    ``resolve`` determines whether a non-literal string (i.e., not surrounded
-    in quotes) will be resolved as a variable; if false, it will be interpreted
-    as a string.
-
-    ``multi`` determines if the argument's value may consist of multiple
-    comma-separated items (which would each be resolved, or not, according to
-    the value of ``resolve``).
-
-    ``flag`` denotes a keyword argument that does *not* have a separate value;
-    its value is true if they keyword is given, and false otherwise.
     """
 
-    def __init__(self, name=None, required=True, default=None, resolve=True,
-                 multi=False, flag=False, positional=False):
-        self.name = name
+    def __init__(self, required=True, default=None, null=False,
+                 positional=False):
+        """
+        ``required`` and ``default`` are mutually exclusive, and only
+        apply to keyword arguments; a positional argument is implicitly
+        required.
+
+        ``null`` determines whether a value of ``None`` is an acceptable
+        value for the tag resolution. If set to ``False`` (default), a value of
+        ``None`` or a missing context variable will cause a
+        ``TemplateTagValidationError`` when cleaned.
+        """
         self.required = required
         self.default = default
-        self.resolve = resolve
-        self.multi = multi
-        self.keyword = None
-        self.flag = flag
+        self.null = null
         self.positional = positional
+
+    def consume(self, parser, tokens, keywords):
+        """
+        Return the values that this argument should capture.
+        
+        ``tokens`` is a list of available tokens for consumption in the tag.
+        Pop tokens as needed from the start of this list, returning a value
+        which can be used for resolution later.
+        """
+        if not self.required:
+            # The default consume method consumes exactly one argument.
+            # Therefore, if the argument is required it doesn't matter if it
+            # clashes with a keyword, don't pass keywords on.
+            keywords = ()
+        value = self.consume_one(tokens, self.required, keywords)
+        if value:
+            return self.compile_filter(parser, value)
+
+    def consume_one(self, tokens, required, keywords=()):
+        """
+        Consume a single token, raising an error if it's required.
+
+        If the next token matches on in ``keywords``, it won't be consumed.
+        """
+        if tokens and tokens[-1] not in keywords:
+            return tokens.pop(0)
+        if required:
+            raise TemplateSyntaxError("Value for '%s' not provided" %
+                                      self.name)
+
+    def compile_filter(self, parser, value):
+        return parser.compile_filter(value)
+
+    def resolve(self, value, context):
+        """
+        Resolve the ``value`` for this argument for the given
+        ``context``.
+        
+        This method is usually overridden by subclasses which also override
+        :meth:`consume` to return different number of resolved values.
+        """
+        if not isinstance(value, FilterExpression):
+            return value
+        return value.resolve(context, ignore_failures=True)
 
     def base_clean(self, value):
         """
-        Validation that always takes place.
+        Ensure the resolved ``value`` is not ``None`` if :attr:`null` is
+        ``True``.
 
-        Don't override me; override ``clean`` instead.
+        Subclasses should override :meth:`clean` instead of this method.
         """
-        if not self.multi and isinstance(value, (list, tuple)):
-            err_msg = "Value for '%s' must be a single item." % (self.name,)
-            raise TemplateTagValidationError(err_msg)
+        if not self.null and value is None:
+            raise TemplateTagValidationError(
+                "Value for '%s' must not be null." % self.name
+            )
         return self.clean(value)
 
     def clean(self, value):
         """
-        Validate the argument value.
+        Validate the resolved ``value``.
 
-        Subclasses should perform any munging here, raising
+        This method is often overridden or extended by subclasses to alter or
+        perform further validation of the value, raising
         ``TemplateTagValidationError`` as necessary.
+        """
+        return value
 
-        Filters are applied *before* ``clean`` is called.
+
+class BasicArg(Arg):
+
+    def compile_filter(self, parser, value):
+        """
+        Don't compile the filter, just return it unaltered. 
         """
         return value
 
@@ -72,6 +105,9 @@ class Arg(object):
 class IntegerArg(Arg):
 
     def clean(self, value):
+        """
+        Ensure the ``value`` is an integer.
+        """
         try:
             value = int(value)
         except (TypeError, ValueError):
@@ -85,6 +121,9 @@ class IntegerArg(Arg):
 class StringArg(Arg):
 
     def clean(self, value):
+        """
+        Ensure the ``value`` is a string or unicode.
+        """
         if not isinstance(value, basestring):
             raise TemplateTagValidationError(
                 "Value for '%s' must be a string" % self.name
@@ -92,17 +131,34 @@ class StringArg(Arg):
         return value
 
 
+class BooleanArg(Arg):
+
+    def consume(self, parser, tokens, keywords):
+        """
+        Simply return ``True``, not consuming any ``tokens``.
+        """
+        return True
+
+
 class ConstantArg(Arg):
 
     def __init__(self, *args, **kwargs):
         super(ConstantArg, self).__init__(*args, **kwargs)
         self.positional = True
-        self.resolve = False
+
+    def consume(self, parser, tokens, keywords):
+        """
+        Simply return :attr:`name`, not consuming any ``tokens``.
+        """
+        return self.name
 
     def clean(self, value):
-        if value != self.keyword:
+        """
+        Ensure the ``value`` matches the :attr:`name` of this argument.
+        """
+        if value != self.name:
             raise TemplateTagValidationError(
-                "Expected constant value '%s' (received '%s')" % (self.keyword,
+                "Expected constant value '%s' (received '%s')" % (self.name,
                                                                   value)
             )
         return value
@@ -111,6 +167,9 @@ class ConstantArg(Arg):
 class DateTimeArg(Arg):
 
     def clean(self, value):
+        """
+        Ensure the ``value`` is a ``datetime.datetime`` instance.
+        """
         if not isinstance(value, datetime.datetime):
             raise TemplateTagValidationError(
                 "Value for '%s' must be a datetime instance" % self.name
@@ -121,6 +180,9 @@ class DateTimeArg(Arg):
 class DateArg(Arg):
 
     def clean(self, value):
+        """
+        Ensure the ``value`` is a ``datetime.date`` instance.
+        """
         if not isinstance(value, datetime.date):
             raise TemplateTagValidationError(
                 "Value for '%s' must be a date instance" % (
@@ -133,6 +195,9 @@ class DateArg(Arg):
 class TimeArg(Arg):
 
     def clean(self, value):
+        """
+        Ensure the ``value`` is a ``datetime.time`` instance.
+        """
         if not isinstance(value, datetime.time):
             raise TemplateTagValidationError(
                 "Value for '%s' must be a time instance" % self.name
@@ -143,6 +208,10 @@ class TimeArg(Arg):
 class ModelInstanceArg(Arg):
 
     def __init__(self, *args, **kwargs):
+        """
+        Take an additional ``model`` argument which will be used to validate
+        against.
+        """
         from django.db import models
         try:
             model = kwargs.pop('model')
@@ -156,6 +225,10 @@ class ModelInstanceArg(Arg):
         super(ModelInstanceArg, self).__init__(*args, **kwargs)
 
     def clean(self, value):
+        """
+        Ensure the ``value`` is an instance of the Model type defined by
+        this argument.
+        """
         if not isinstance(value, self.model_class):
             raise TemplateTagValidationError(
                 "Value for '%s' must be an instance of %s.%s" % (

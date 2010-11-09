@@ -1,1 +1,2 @@
-from tagcon.tests.main import TagExecutionTests, TestArgumentTypes
+from tagcon.tests.main import TagExecutionTests, TestArgumentTypes, \
+    PositionalTest

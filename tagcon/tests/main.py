@@ -16,31 +16,18 @@ def render(contents, extra_context=None):
 class TagExecutionTests(TestCase):
 
     def test_no_args(self):
-        """A tag with keyword arguments works with or without the argument as
-        long as a default value is set"""
+        """
+        A tag with keyword arguments works with or without the argument as long
+        as a default value is set.
+        """
 
         self.assertEqual(render('{% keyword limit 200 %}'),
                          'The limit is 200')
 
         self.assertEqual(render('{% keyword %}'),
                          'The limit is %d' %
-                         tags.KeywordTag._keyword_args['limit'].default)
+                         tags.KeywordTag._args['limit'].default)
 
-        self.assertEqual(render('{% single_positional 10 %}'), u"10")
-
-        self.assertEqual(render('{% new_positional 10 %}'), u"10")
-
-        self.assertEqual(render('{% multiple_new_positional 10 6 %}'), u"60")
-
-
-        self.assertRaises(tagcon.TemplateTagValidationError, render,
-                          '{% keyword_no_default %}')
-
-        # what if we change the arg to be null=True?
-        tags.KeywordNoDefaultTag._keyword_args['limit'].null = True
-
-        # now instead of on validation the error moves to when rendering. None
-        # is not an integer
         self.assertRaises(template.TemplateSyntaxError, render,
                           '{% keyword_no_default %}')
 
@@ -58,6 +45,28 @@ class TagExecutionTests(TestCase):
                           '{% no_argument this fails %}')
 
 
+class PositionalTest(TestCase):
+
+    def test_positional(self):
+        """
+        Test that positional arguments work.
+        """
+        self.assertEqual(render('{% positional 10 %}'), u"10")
+
+        self.assertRaises(template.TemplateSyntaxError, render,
+                          '{% positional %}')
+        self.assertRaises(template.TemplateSyntaxError, render,
+                          '{% positional limit 10 %}')
+
+    def test_positional_mixed(self):
+        """
+        Test that positional arguments work, mixed with keyword arguments.
+        """
+        self.assertEqual(render('{% positional_mixed 1 as a%}x{{ a }}'), 'x1')
+        self.assertEqual(render('{% positional_mixed var as a%}x{{ a }}',
+                                {'var': '2'}), 'x2')
+
+
 class TestArgumentTypes(TestCase):
 
     def test_model_instance_arg(self):
@@ -69,25 +78,46 @@ class TestArgumentTypes(TestCase):
         self.assertRaises(tagcon.TemplateTagValidationError, render, content,
                           {'object': int()})
 
+        # Fail if the variable isn't in the context.
+        self.assertRaises(tagcon.TemplateTagValidationError, render, content)
+
     def test_integer_arg(self):
         self.assertEqual(render('{% argument_type age 101 %}'), '101')
+        self.assertEqual(render('{% argument_type age a %}', {'a': 99}), '99')
 
-        # IntegerArg.clean calls int(value) to convert "23" to 23
+        # IntegerArg.clean calls int(value), so string integers should be
+        # converted.
         self.assertEqual(render('{% argument_type age "23" %}'), '23')
+        self.assertEqual(render('{% argument_type age a %}', {'a': '7'}), '7')
 
-        # IntegerArg.clean will choke on the string
+        # Fail if value or variable can't be resolved as an integer.
         self.assertRaises(tagcon.TemplateTagValidationError, render,
                           '{% argument_type age "7b" %}')
+        self.assertRaises(tagcon.TemplateTagValidationError, render,
+                          '{% argument_type age age %}', {'age': 'NaN'})
+
+        # Fail if the variable isn't in the context.
+        self.assertRaises(tagcon.TemplateTagValidationError, render,
+                          '{% argument_type age age %}')
 
     def test_string_arg(self):
+        # Ensure both single quotes and double quotes work.
         self.assertEqual(render('{% argument_type name "alice" %}'), 'alice')
-
-        # i can't remember which one (url perhaps?) but there was a tag that
-        # worked with single quotes but not double quotes and so we check both
         self.assertEqual(render("{% argument_type name 'bob' %}"), 'bob')
 
-        # will not find a var named dave in the context
-        self.assertRaises(template.TemplateSyntaxError, render,
+        # Ensure a context variable works.
+        self.assertEqual(render("{% argument_type name dave %}",
+                                {'dave': 'Dave'}),
+                         'Dave')
+
+        # Fail if variable or value isn't a string.
+        self.assertRaises(tagcon.TemplateTagValidationError, render,
+                          '{% argument_type name 123 %}')
+        self.assertRaises(tagcon.TemplateTagValidationError, render,
+                          '{% argument_type name dave %}', {'dave': 1})
+
+        # Fail if the variable isn't in the context.
+        self.assertRaises(tagcon.TemplateTagValidationError, render,
                           '{% argument_type name dave %}')
 
     def test_datetime_arg(self):
@@ -96,12 +126,36 @@ class TestArgumentTypes(TestCase):
                                                          22, 33, 47)}),
                          '2010-01-09 22:33:47')
 
+        # Fail if variable isn't a datetime.
+        self.assertRaises(tagcon.TemplateTagValidationError, render,
+                          '{% argument_type datetime dt %}', {'dt': 'NaN'})
+
+        # Fail if the variable isn't in the context.
+        self.assertRaises(tagcon.TemplateTagValidationError, render,
+                          '{% argument_type datetime dt %}')
+
     def test_date_arg(self):
         self.assertEqual(render('{% argument_type date d %}',
                                 {'d': datetime.date(2010, 1, 9)}),
                          '2010-01-09')
 
+        # Fail if variable isn't a datetime.
+        self.assertRaises(tagcon.TemplateTagValidationError, render,
+                          '{% argument_type date d %}', {'d': 'NaN'})
+
+        # Fail if the variable isn't in the context.
+        self.assertRaises(tagcon.TemplateTagValidationError, render,
+                          '{% argument_type date d %}')
+
     def test_time_arg(self):
         self.assertEqual(render('{% argument_type time t %}',
                                 {'t': datetime.time(22, 33, 47)}),
                          '22:33:47')
+
+        # Fail if variable isn't a datetime.
+        self.assertRaises(tagcon.TemplateTagValidationError, render,
+                          '{% argument_type time t %}', {'t': 'NaN'})
+
+        # Fail if the variable isn't in the context.
+        self.assertRaises(tagcon.TemplateTagValidationError, render,
+                          '{% argument_type time t %}')
