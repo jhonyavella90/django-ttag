@@ -13,12 +13,10 @@ class Arg(object):
     def __init__(self, required=True, default=None, null=False,
                  positional=False):
         """
-        ``required`` and ``default`` are mutually exclusive, and only
-        apply to keyword arguments; a positional argument is implicitly
-        required.
+        ``required`` and ``default`` are mutually exclusive.
 
-        ``null`` determines whether a value of ``None`` is an acceptable
-        value for the tag resolution. If set to ``False`` (default), a value of
+        ``null`` determines whether a value of ``None`` is an acceptable value
+        for the argument resolution. If set to ``False`` (default), a value of
         ``None`` or a missing context variable will cause a
         ``TemplateTagValidationError`` when cleaned.
         """

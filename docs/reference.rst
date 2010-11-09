@@ -208,45 +208,58 @@ This is the base class for all other argument types.  Behavior can be defined
 via the following constructor arguments.
 
 
-name (default first argument, uses the keyword if not specified)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+required
+~~~~~~~~
 
-This is the name which the value will be stuffed into in ``self.args``.  It is
-*not* the keyword name used in the tag itself.
+Whether the argument is required as part of the tag definition in the template.
+Required positional arguments can not occur after optional ones. 
 
+Defaults to ``False``.
 
-required (defaults to False)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Whether the argument is required.  Positional arguments are implicitly required.
-
-
-default (defaults to None)
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+default
+~~~~~~~
 
 The default value for this argument if it is not specified.
 
+If ``None`` and the field is required, an exception will be raised when the
+template is parsed.
 
-resolve (defaults to true)
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+Defaults to ``None``.
 
-Whether to resolve the argument as a template variable if it is not a
-literal. (surrounded by single or double quotes).  You will have to call
-``self.resolve(context)`` in your ``render`` for this to take effect.
+null
+~~~~
+
+Determines whether a value of ``None`` is an acceptable value for the argument
+resolution.
+
+When set to ``False``, a value of ``None`` or a missing context variable will
+cause a ``TemplateTagValidationError`` when this argument is cleaned.
+
+Defaults to ``False``.
+
+positional
+~~~~~~~~~~
+
+Whether this is a positional tag (i.e. the argument name is not part of the tag
+definition).  
+
+Defaults to ``False``.
 
 
-multi (defaults to False)
-~~~~~~~~~~~~~~~~~~~~~~~~~
+BasicArg
+--------
 
-Whether the argument's value may consist of multiple comma-separated items
-(which can be resolved or not depending on the value of ``resolve``).
+A simpler argument which doesn't compile its value as a ``FilterExpression``.
 
+Example usage::
 
-flag (defaults to False)
-~~~~~~~~~~~~~~~~~~~~~~~~
+    class GetUsersTag(tagcon.TemplateTag)
+        as_ = tagcon.BasicArg()
 
-Denotes a keyword argument that does *not* have an associated value.  Its value
-is ``True`` if the keyword is given, and ``False`` otherwise.
+        def render(self, context)
+            data = self.resolve(data)
+            context[data['as']] = Users.objects.all()
+            return '' 
 
 
 IntegerArg
@@ -260,6 +273,26 @@ StringArg
 
 Validates that the argument is a ``string`` instance, otherwise throws a
 template error.
+
+
+BooleanArg
+----------
+
+A "flag" argument which doesn't consume any additional tokens.
+
+If it is not defined in the tag, the argument value will not exist in the
+resolved data dictionary.
+
+For example::
+
+    class CoolTag(tagcon.TemplateTag)
+        cool = tagcon.BooleanArg()
+
+        def output(self, data):
+            if 'cool' in data:
+                return "That's cool!"
+            else:
+                return "Uncool."
 
 
 DateTimeArg
@@ -286,24 +319,21 @@ error.
 ModelInstanceArg
 ----------------
 
-This ``Arg`` subclass validates that the passed in value is an instance of the
-specified ``Model`` class.  It takes a single named argument, ``model``.  Note
-that ModelInstanceArgs cannot take multiple values using ``multi``.
+Validates that the passed in value is an instance of the specified ``Model``
+class.  It takes a single additional named argument, ``model``.
 
+model
+~~~~~
 
-model (required)
-~~~~~~~~~~~~~~~~
-
-Argument is the ``Model`` class you want to validate against.  An error will be
-thrown if the argument value is not an instance of this ``Model`` class.
+The ``Model`` class you want to validate against.
 
 
 Full Example
 ============
 
 This example provides a template tag which outputs a tweaked version of the
-instance name passed in.  It demonstrates using the various Arg types to have
-tagcon do the hard work for you::
+instance name passed in.  It demonstrates using the various ``Arg`` types to
+have tagcon do the hard work for you::
 
     class TweakName(tagcon.TemplateTag):
         """
@@ -312,37 +342,34 @@ tagcon do the hard work for you::
 
         {% tweak_name instance [offset=0] [limit=10] [reverse] %}
         """
-
-        _ = (tagcon.ModelInstanceArg('instance', model=NamedModel))
+		instance = tagcon.ModelInstanceArg(positional=True, model=NamedModel))
         offset = tagcon.IntegerArg(default=0)
         limit = tagcon.IntegerArg(default=10)
-        reverse = tagcon.Arg(flag=True)
+        reverse = tagcon.BooleanArg()
 
-        def render(self, context):
-            self.resolve(context)
-
-            name = self.args.instance.name
+        def output(self, data):
+            name = data['instance'].name
 
             # reverse if appropriate
-            if self.args.reverse:
+            if 'reverse' in data:
                 name = name[::-1]
 
             # check that limit is not < 0
-            if self.args.limit < 0:
+            if data['limit'] < 0:
                 raise tagcon.TemplateTagValidationError("limit must be >= 0")
 
             # apply our offset and limit
-            name = name[self.args.offset:][0:self.args.limit]
+            name = name[data['offset']:data['limit']]
 
             # return the tweaked name
             return name
 
 Example usages::
 
-    {% tweak_name inst limit 5 %}
+    {% tweak_name obj limit 5 %}
 
-    {% tweak_name inst offset 1 %}
+    {% tweak_name obj offset 1 %}
 
-    {% tweak_name inst reverse %}
+    {% tweak_name obj reverse %}
 
-    {% tweak_name inst offset 1 limit 5 reverse %}
+    {% tweak_name obj offset 1 limit 5 reverse %}
