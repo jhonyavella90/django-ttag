@@ -7,6 +7,8 @@ class Arg(object):
     """
     A template tag argument.
     """
+    # Tracks each time an Arg instance is created. Used to retain order.
+    creation_counter = 0
 
     def __init__(self, required=True, default=None, null=False,
                  positional=False):
@@ -25,6 +27,10 @@ class Arg(object):
         self.null = null
         self.positional = positional
 
+        # Increase the creation counter, and save our local copy.
+        self.creation_counter = Arg.creation_counter
+        Arg.creation_counter += 1
+
     def consume(self, parser, tokens, keywords):
         """
         Return the values that this argument should capture.
@@ -33,7 +39,7 @@ class Arg(object):
         Pop tokens as needed from the start of this list, returning a value
         which can be used for resolution later.
         """
-        if not self.required:
+        if self.required:
             # The default consume method consumes exactly one argument.
             # Therefore, if the argument is required it doesn't matter if it
             # clashes with a keyword, don't pass keywords on.
@@ -48,7 +54,7 @@ class Arg(object):
 
         If the next token matches on in ``keywords``, it won't be consumed.
         """
-        if tokens and tokens[-1] not in keywords:
+        if tokens and tokens[0] not in keywords:
             return tokens.pop(0)
         if required:
             raise TemplateSyntaxError("Value for '%s' not provided" %
@@ -140,27 +146,20 @@ class BooleanArg(Arg):
         return True
 
 
-class ConstantArg(Arg):
+class ConstantArg(BasicArg):
 
     def __init__(self, *args, **kwargs):
         super(ConstantArg, self).__init__(*args, **kwargs)
         self.positional = True
 
-    def consume(self, parser, tokens, keywords):
+    def consume(self, *args, **kwargs):
         """
-        Simply return :attr:`name`, not consuming any ``tokens``.
+        Consume the Ensure the ``value`` matches the :attr:`name` of this argument.
         """
-        return self.name
-
-    def clean(self, value):
-        """
-        Ensure the ``value`` matches the :attr:`name` of this argument.
-        """
+        value = super(ConstantArg, self).consume(*args, **kwargs)
         if value != self.name:
-            raise TemplateTagValidationError(
-                "Expected constant value '%s' (received '%s')" % (self.name,
-                                                                  value)
-            )
+            raise TemplateSyntaxError("Expected constant '%s' instead of '%s'"
+                                      % (self.name, value))
         return value
 
 

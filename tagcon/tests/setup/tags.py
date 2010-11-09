@@ -45,6 +45,31 @@ class PositionalMixedTag(tagcon.TemplateTag):
         return ''
 
 
+class PositionalOptionalTag(tagcon.TemplateTag):
+    start = tagcon.IntegerArg(positional=True)
+    finish = tagcon.IntegerArg(positional=True, required=False)
+
+    def output(self, data):
+        if 'finish' in data:
+            start, finish = data['start'], data['finish']
+        else:
+            start, finish = 0, data['start']
+        return ','.join([str(i) for i in range(start, finish)])
+
+
+class PositionalOptionalMixedTag(tagcon.TemplateTag):
+    start = tagcon.IntegerArg(positional=True)
+    finish = tagcon.IntegerArg(positional=True, required=False)
+    step = tagcon.IntegerArg()
+
+    def output(self, data):
+        if 'finish' in data:
+            start, finish = data['start'], data['finish']
+        else:
+            start, finish = 0, data['start']
+        return ','.join([str(i) for i in range(start, finish, data['step'])])
+
+
 class ArgumentTypeTag(tagcon.TemplateTag):
     age = tagcon.IntegerArg(required=False)
     name_ = tagcon.StringArg(required=False)

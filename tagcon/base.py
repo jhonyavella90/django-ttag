@@ -37,39 +37,53 @@ class TemplateTagBase(type):
             if isinstance(module_library, template.Library):
                 library = module_library
 
+        # use supplied name, or generate one from class name
+        tag_name = getattr(meta, 'name', utils.get_tag_name(name))
+
+        all_args = [(name.rstrip('_'), attrs.pop(name))
+                    for name, obj in attrs.items() if isinstance(obj, Arg)]
+        all_args.sort(key=lambda x: x[1].creation_counter)
+    
         positional_args = []
+        optional_positional = False
         keyword_args = {}
-        all_args = {}
 
         # Find and remove the arguments from attrs.
-        keys = attrs.keys()
-        for key in keys:
-            arg = attrs[key]
-            if not isinstance(arg, Arg):
-                continue
-            del attrs[key]
-            if key.endswith('_'):
-                key = key.rstrip('_')
-            arg.name = key
+        for name, arg in all_args:
+            arg.name = name
             if arg.positional:
+                if arg.required:
+                    if optional_positional:
+                        raise template.TemplateSyntaxError(
+                            "Required '%s' positional argument of '%s' cannot "
+                            "exist after optional positional arguments." % (
+                                arg.name,
+                                tag_name,
+                            )
+                        )
+                else:
+                    optional_positional = True
                 positional_args.append(arg)
             else:
-                keyword_args[key] = arg
-            all_args[arg.name] = arg
+                keyword_args[name] = arg
 
-        # Positional args are currently always required. This may change in the
-        # future.
-        for arg in positional_args:
-            arg.required = True
+        # If this class is subclassing another TemplateTag, add that tag's
+        # positional arguments before ones declared here. The bases are looped
+        # in reverse to preserve the correct order of positional arguments and
+        # correctly override keyword arguments.
+        for base in bases[::-1]:
+            if hasattr(base, '_positional_args') and \
+                    hasattr(base, '_keyword_args'):
+                positional_args = base._positional_args + positional_args
+                for name, arg in base._keyword_args.iteritems(): 
+                    if name not in keyword_args:
+                        keyword_args[name] = arg 
 
         attrs['_positional_args'] = positional_args
         attrs['_keyword_args'] = keyword_args
-        attrs['_args'] = all_args
+        attrs['_args'] = dict(all_args)
 
-        # use supplied name, or generate one from class name
-        tag_name = getattr(meta, 'name', utils.get_tag_name(name))
         attrs['name'] = tag_name
-
         attrs['block'] = getattr(meta, 'block', False)
 
         # create the new class
@@ -101,7 +115,18 @@ class TemplateTag(template.Node):
         keywords = self._keyword_args.keys()
         for arg in self._positional_args:
             value = arg.consume(parser, tokens, keywords)
-            self._vars[arg.name] = value
+            if value is None:
+                if arg.default is not None:
+                    self._vars[arg.name] = arg.default
+                elif arg.required:
+                    raise template.TemplateSyntaxError(
+                        "'%s' positional argument to '%s' is required" % (
+                            arg.name,
+                            self.name,
+                        )
+                    )
+            else:
+                self._vars[arg.name] = value
 
     def _process_keyword_args(self, parser, tokens):
         keywords = self._keyword_args.keys()

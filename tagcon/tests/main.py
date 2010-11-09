@@ -44,6 +44,19 @@ class TagExecutionTests(TestCase):
         self.assertRaises(template.TemplateSyntaxError, template.Template,
                           '{% no_argument this fails %}')
 
+    def test_constant_tag(self):
+        """tags with no arguments take no arguments"""
+        self.assertEqual(render('{% constant 1 to 2 %}'), '1 - 2')
+        self.assertRaises(template.TemplateSyntaxError, template.Template,
+                          '{% constant 1 t 2 %}', {'t': 'to'})
+
+
+def build_invalid_positional_optional():
+
+    class Tag(tagcon.TemplateTag):
+        start = tagcon.Arg(positional=True, required=False)
+        end = tagcon.Arg(positional=True)
+
 
 class PositionalTest(TestCase):
 
@@ -65,6 +78,22 @@ class PositionalTest(TestCase):
         self.assertEqual(render('{% positional_mixed 1 as a%}x{{ a }}'), 'x1')
         self.assertEqual(render('{% positional_mixed var as a%}x{{ a }}',
                                 {'var': '2'}), 'x2')
+
+    def test_positional_optional(self):
+        """
+        Test that optional positional arguments work.
+        """
+        self.assertEqual(render('{% positional_optional 2 %}'), '0,1')
+        self.assertEqual(render('{% positional_optional_mixed 10 step 2 %}'),
+                         '0,2,4,6,8')
+
+    def test_optional_last(self):
+        """
+        Test that an error is raised if optional positional arguments are
+        followed by required ones.
+        """
+        self.assertRaises(template.TemplateSyntaxError,
+                          build_invalid_positional_optional)
 
 
 class TestArgumentTypes(TestCase):
