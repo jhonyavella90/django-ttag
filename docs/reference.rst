@@ -84,7 +84,6 @@ standard library ``register`` method::
 
     my_tag_library.register(MyTag.name, MyTag) 
 
-
 silence_errors
 ~~~~~~~~~~~~~~
 
@@ -195,7 +194,155 @@ value added to the data dictionary if an argument is not provided::
         limit = tagcon.Arg(default=100)
         offset = tagcon.Arg(required=False)
 
-Arg
-===
 
-To be written.  (See ``Arg``'s docstring for now.)
+Argument Types
+==============
+
+Arg and its subclasses provide various other levels of parsing and validation.
+
+
+Arg
+---
+
+This is the base class for all other argument types.  Behavior can be defined
+via the following constructor arguments.
+
+
+name (default first argument, uses the keyword if not specified)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This is the name which the value will be stuffed into in ``self.args``.  It is
+*not* the keyword name used in the tag itself.
+
+
+required (defaults to False)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Whether the argument is required.  Positional arguments are implicitly required.
+
+
+default (defaults to None)
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The default value for this argument if it is not specified.
+
+
+resolve (defaults to true)
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Whether to resolve the argument as a template variable if it is not a
+literal. (surrounded by single or double quotes).  You will have to call
+``self.resolve(context)`` in your ``render`` for this to take effect.
+
+
+multi (defaults to False)
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Whether the argument's value may consist of multiple comma-separated items
+(which can be resolved or not depending on the value of ``resolve``).
+
+
+flag (defaults to False)
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Denotes a keyword argument that does *not* have an associated value.  Its value
+is ``True`` if the keyword is given, and ``False`` otherwise.
+
+
+IntegerArg
+----------
+
+Validates that the argument is an integer, otherwise throws a template error.
+
+
+StringArg
+---------
+
+Validates that the argument is a ``string`` instance, otherwise throws a
+template error.
+
+
+DateTimeArg
+-----------
+
+Validates that the argument is a ``datetime`` instance, otherwise throws a
+template error.
+
+
+DateArg
+-------
+
+Validates that the argument is a ``date`` instance, otherwise throws a template
+error.
+
+
+TimeArg
+-------
+
+Validates that the argument is a ``time`` instance, otherwise throws a template
+error.
+
+
+ModelInstanceArg
+----------------
+
+This ``Arg`` subclass validates that the passed in value is an instance of the
+specified ``Model`` class.  It takes a single named argument, ``model``.  Note
+that ModelInstanceArgs cannot take multiple values using ``multi``.
+
+
+model (required)
+~~~~~~~~~~~~~~~~
+
+Argument is the ``Model`` class you want to validate against.  An error will be
+thrown if the argument value is not an instance of this ``Model`` class.
+
+
+Full Example
+============
+
+This example provides a template tag which outputs a tweaked version of the
+instance name passed in.  It demonstrates using the various Arg types to have
+tagcon do the hard work for you::
+
+    class TweakName(tagcon.TemplateTag):
+        """
+        Provides the tweak_name template tag, which outputs a
+        slightly modified version of the NamedModel instance passed in.
+
+        {% tweak_name instance [offset=0] [limit=10] [reverse] %}
+        """
+
+        _ = (tagcon.ModelInstanceArg('instance', model=NamedModel))
+        offset = tagcon.IntegerArg(default=0)
+        limit = tagcon.IntegerArg(default=10)
+        reverse = tagcon.Arg(flag=True)
+
+        def render(self, context):
+            self.resolve(context)
+
+            name = self.args.instance.name
+
+            # reverse if appropriate
+            if self.args.reverse:
+                name = name[::-1]
+
+            # check that limit is not < 0
+            if self.args.limit < 0:
+                raise tagcon.TemplateTagValidationError("limit must be >= 0")
+
+            # apply our offset and limit
+            name = name[self.args.offset:][0:self.args.limit]
+
+            # return the tweaked name
+            return name
+
+Example usages::
+
+    {% tweak_name inst limit 5 %}
+
+    {% tweak_name inst offset 1 %}
+
+    {% tweak_name inst reverse %}
+
+    {% tweak_name inst offset 1 limit 5 reverse %}
