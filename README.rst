@@ -102,9 +102,6 @@ production at The Onion, though, for what that's worth.)  Unlike most other
 tools that I've worked on over time and never released for want of polishing, I
 figured it was better to just push it out first and polish later.
 
-In particular, I'm not entirely comfortable with the underscore syntax to
-denote positional arguments; I'm open to better ideas there.
-
 
 Contributing
 ============

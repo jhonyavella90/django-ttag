@@ -134,9 +134,9 @@ argument in the tag below::
 
     class SetTag(tagcon.TemplateTag):
         value = tagcon.Arg(positional=True)
-        as_ = tagcon.StringArg()
+        as_ = tagcon.BasicArg()
         
-        def render(context):
+        def render(self, context):
             data = self.resolve(context)
             as_var = data['as']
             context[as_var] = data['value']
