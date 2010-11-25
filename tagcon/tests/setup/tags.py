@@ -83,7 +83,7 @@ class ArgumentTypeTag(tagcon.TemplateTag):
         order = 'name age url date time datetime'.split()
         values = [unicode(data[x]) for x in order if x in data]
         if 'flag' in data:
-            values.append('flag_set')
+            values.append('flag_is_set')
         return u' '.join(values)
 
 

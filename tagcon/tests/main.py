@@ -188,3 +188,7 @@ class TestArgumentTypes(TestCase):
         # Fail if the variable isn't in the context.
         self.assertRaises(tagcon.TemplateTagValidationError, render,
                           '{% argument_type time t %}')
+
+    def test_flag_arg(self):
+        self.assertEqual(render('{% argument_type %}'), '')
+        self.assertEqual(render('{% argument_type flag %}'), 'flag_is_set')
