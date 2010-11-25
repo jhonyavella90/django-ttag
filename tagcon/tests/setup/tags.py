@@ -77,10 +77,14 @@ class ArgumentTypeTag(tagcon.TemplateTag):
     date = tagcon.DateArg(required=False)
     time = tagcon.TimeArg(required=False)
     datetime = tagcon.DateTimeArg(required=False)
+    flag = tagcon.BooleanArg()
 
     def output(self, data):
         order = 'name age url date time datetime'.split()
-        return ' '.join([str(data[x]) for x in order if x in data])
+        values = [unicode(data[x]) for x in order if x in data]
+        if 'flag' in data:
+            values.append('flag_set')
+        return u' '.join(values)
 
 
 class ConstantTag(tagcon.TemplateTag):

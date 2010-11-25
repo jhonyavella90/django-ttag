@@ -214,7 +214,7 @@ required
 Whether the argument is required as part of the tag definition in the template.
 Required positional arguments can not occur after optional ones. 
 
-Defaults to ``False``.
+Defaults to ``True``.
 
 default
 ~~~~~~~
@@ -293,6 +293,16 @@ For example::
                 return "That's cool!"
             else:
                 return "Uncool."
+
+
+IsInstanceArg
+-------------
+
+Validates that the argument is an instance of the provided class (``cls``),
+otherwise throws a a template error, using the ``cls_name`` in the error
+message.
+
+	date = IsInstanceArg(cls=datetime.date, cls_name=_('Date'))
 
 
 DateTimeArg
