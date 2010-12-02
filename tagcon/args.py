@@ -1,4 +1,5 @@
 import datetime
+import re
 from django.template import TemplateSyntaxError, FilterExpression
 from tagcon.exceptions import TemplateTagValidationError
 
@@ -62,9 +63,17 @@ class Arg(object):
         """
         Return the values that this argument should capture.
 
-        ``tokens`` is a list of available tokens for consumption in the tag.
-        Pop tokens as needed from the start of this list, returning a value
-        which can be used for resolution later.
+        :param tokens: A list of available tokens for consumption in the tag.
+        :param keywords: A list of other keywords which are valid for the
+            tag. 
+
+        This method may be overridden by subclasses to change the behaviour of
+        the argument, in which case the :meth:`resolve` may also need to be
+        overridden.
+
+        The default behaviour is to use the :meth:`consume_one` method,
+        compiling the result as a template variable that can be used for
+        resolution later.
         """
         if self.required:
             # The default consume method consumes exactly one argument.
@@ -305,3 +314,80 @@ class ModelInstanceArg(IsInstanceArg):
             raise TypeError("'model' must be a Model subclass")
         self.cls = model
         super(ModelInstanceArg, self).__init__(*args, **kwargs)
+
+
+class KeywordsArg(Arg):
+    """
+    Parses in one or more keyword tokens.
+
+    Depending on the meth:`__init__` parameters, the keyword argument format
+    may be compact (``foo=1 bar=2``), verbose (``1 as foo and 2 as bar``) or
+    mixed (``foo=1 and 2 as bar``). The default is compact.
+
+    In verbose mode, the ``and`` is required for multiple arguments, in mixed
+    mode it is optional, and in compact mode it is obviously not used.
+    """
+    re_compact = re.compile(r'(\w+)=(.+)')
+    re_keyword = re.compile(r'\w+$')
+
+    def __init__(self, *args, **kwargs):
+        """
+        :param compile_values: Compile values as template variables (default
+            ``True``).
+        :param compact: Accept the compact ``foo=1`` argument format (default
+            ``True``).
+        :param verbose: Accept the verbose ``1 as foo`` argument format
+            (default ``False``).
+        """
+        self.compile_values = kwargs.pop('compile_values', True)
+        self.compact = kwargs.pop('compact', True)
+        self.verbose = kwargs.pop('verbose', False)
+        super(KeywordsArg, self).__init__(*args, **kwargs)
+
+    def consume(self, parser, tokens, keywords):
+        """
+        Consume one or more keyword arguments.
+        """
+        kwargs = {}
+        while tokens:
+            key = None
+            if self.compact:
+                match = self.re_compact.match(tokens[0])
+                if match:
+                    del tokens[0]
+                    key, value = match.groups()
+            if not key and self.verbose:
+                if len(tokens) >= 3 and tokens[1] == 'as' and \
+                        self.re_keyword.match(tokens[2]):
+                    key, value = tokens[2], tokens[0]
+                    del tokens[0:3]
+            if not key:
+                break
+            if key in kwargs:
+                raise TemplateSyntaxError("Duplicate keyword argument ('%s') "
+                                          "provided for '%s'" % (key,
+                                                                 self.name))
+            if self.compile_values:
+                value = self.compile_filter(parser, value)
+            kwargs[key] = value
+            if self.verbose:
+                if tokens and tokens[0] == 'and':
+                    del tokens[0]
+                elif not self.compact:
+                    # If we're in exclusive verbose mode so 'and' is required
+                    # for multiple keywords.
+                    break
+        if self.required and not kwargs:
+            raise TemplateSyntaxError("No keyword arguments provided for '%s'"
+                                      % self.name)
+        return kwargs
+
+    def resolve(self, value, context, *args, **kwargs):
+        """
+        Resolve the keyword argument values for this argument for the given
+        ``context``.
+        """
+        for key, val in value.items():
+            value[key] = super(KeywordsArg, self).resolve(val, context, *args,
+                                                          **kwargs)
+        return value

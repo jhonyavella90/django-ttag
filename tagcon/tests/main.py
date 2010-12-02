@@ -192,3 +192,73 @@ class TestArgumentTypes(TestCase):
     def test_flag_arg(self):
         self.assertEqual(render('{% argument_type %}'), '')
         self.assertEqual(render('{% argument_type flag %}'), 'flag_is_set')
+
+
+class KeywordsArgTest(TestCase):
+    compact_kwargs = ' "file.html" with foo=x bar=2 %}'
+    verbose_kwargs = ' "file.html" with x as foo and 2 as bar %}'
+    mixed_kwargs = ' "file.html" with bar=2 x as foo and baz=3 %}'
+
+    def test_not_required(self):
+        self.assertEqual(render('{% include_compact "file.html" %}'),
+                         'including file.html')
+        self.assertEqual(render('{% include_verbose "file.html" %}'),
+                         'including file.html')
+        self.assertEqual(render('{% include_mixed "file.html" %}'),
+                         'including file.html')
+    
+    def test_compact(self):
+        self.assertEqual(
+            render('{% include_compact' + self.compact_kwargs, {'x': 1}),
+            'including file.html with bar = 2 and foo = 1'
+        )
+
+    def test_compact_invalid(self):
+        self.assertRaises(
+            template.TemplateSyntaxError, render,
+            '{% include_compact "file.html" with foo=1 and bar=2 %}'
+        )
+        self.assertRaises(
+            template.TemplateSyntaxError, render,
+            '{% include_compact' + self.verbose_kwargs
+        )
+        self.assertRaises(
+            template.TemplateSyntaxError, render,
+            '{% include_compact' + self.mixed_kwargs
+        )
+    
+    def test_verbose(self):
+        self.assertEqual(
+            render('{% include_verbose' + self.verbose_kwargs, {'x': 1}),
+            'including file.html with bar = 2 and foo = 1'
+        )
+    
+    def test_verbose_invalid(self):
+        self.assertRaises(
+            template.TemplateSyntaxError, render,
+            '{% include_verbose' + self.compact_kwargs
+        )
+        self.assertRaises(
+            template.TemplateSyntaxError, render,
+            '{% include_verbose' + self.mixed_kwargs
+        )
+    
+    def test_mixed(self):
+        self.assertEqual(
+            render('{% include_mixed' + self.mixed_kwargs, {'x': 1}),
+            'including file.html with bar = 2 and baz = 3 and foo = 1'
+        )
+    
+    def test_duplicate_key(self):
+        self.assertRaises(
+            template.TemplateSyntaxError, render,
+            '{% include_compact "file.html" with foo=1 foo=2 %}'
+        )
+        self.assertRaises(
+            template.TemplateSyntaxError, render,
+            '{% include_verbose "file.html" with 1 as foo and 2 as foo %}'
+        )
+        self.assertRaises(
+            template.TemplateSyntaxError, render,
+            '{% include_mixed "file.html" with foo=1 2 as foo %}'
+        )

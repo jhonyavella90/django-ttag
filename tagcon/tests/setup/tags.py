@@ -94,3 +94,33 @@ class ConstantTag(tagcon.TemplateTag):
 
     def output(self, data):
         return '%s - %s' % (data['start'], data['finish'])
+
+
+class BaseIncludeTag(tagcon.TemplateTag):
+    """
+    A tag for testing KeywordsArg.
+    """
+
+    def output(self, data):
+        out = 'including %s' % data['template']
+        if data.get('with'):
+            with_bits = data['with'].items()
+            with_bits.sort(key=lambda bit: bit[0])
+            out += ' with %s' % ' and '.join(['%s = %s' % (k, v)
+                                              for k, v in with_bits])
+        return out
+
+
+class IncludeCompactTag(BaseIncludeTag):
+    template = tagcon.Arg(positional=True)
+    with_ = tagcon.KeywordsArg(required=False)
+
+
+class IncludeVerboseTag(BaseIncludeTag):
+    template = tagcon.Arg(positional=True)
+    with_ = tagcon.KeywordsArg(required=False, compact=False, verbose=True)
+
+
+class IncludeMixedTag(BaseIncludeTag):
+    template = tagcon.Arg(positional=True)
+    with_ = tagcon.KeywordsArg(required=False, verbose=True)
