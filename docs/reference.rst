@@ -355,6 +355,35 @@ model
 The ``Model`` class you want to validate against.
 
 
+KeywordsArg
+-----------
+
+Parses one or more additional tokens as keywords.
+
+Use ``compact`` and ``verbose`` boolean parameters to control the keyword
+argument format. The default format is compact::
+
+    {% compact with foo=1 bar=2 %}
+
+Setting ``verbose=True`` and ``compact=False`` will require verbose format:
+
+	{% verbose with 1 as foo and 2 as bar %}
+
+If ``verbose=True`` and ``compact`` is left as ``True, then either (or even
+both) formats are allowed. This is usually only used for backwards
+compatibility::
+
+    {% mixed with foo=1 bar=2 %}
+    {% mixed with 1 as foo and 2 as bar %}
+    {% mixed with foo=1 and 2 as bar %}
+
+In verbose mode, the ``and`` is required for multiple arguments, in mixed
+mode it is optional, and in compact mode it is obviously not used.
+
+Use the ``compile_values`` parameter to compile keyword values as template
+variables (defaults to ``True``).
+
+
 Full Example
 ============
 
