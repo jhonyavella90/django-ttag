@@ -43,10 +43,10 @@ class TemplateTagBase(type):
         all_args = [(name.rstrip('_'), attrs.pop(name))
                     for name, obj in attrs.items() if isinstance(obj, Arg)]
         all_args.sort(key=lambda x: x[1].creation_counter)
-    
+
         positional_args = []
         optional_positional = False
-        keyword_args = {}
+        named_args = {}
 
         # Find and remove the arguments from attrs.
         for name, arg in all_args:
@@ -65,22 +65,22 @@ class TemplateTagBase(type):
                     optional_positional = True
                 positional_args.append(arg)
             else:
-                keyword_args[name] = arg
+                named_args[name] = arg
 
         # If this class is subclassing another TemplateTag, add that tag's
         # positional arguments before ones declared here. The bases are looped
         # in reverse to preserve the correct order of positional arguments and
-        # correctly override keyword arguments.
+        # correctly override named arguments.
         for base in bases[::-1]:
             if hasattr(base, '_positional_args') and \
-                    hasattr(base, '_keyword_args'):
+                    hasattr(base, '_named_args'):
                 positional_args = base._positional_args + positional_args
-                for name, arg in base._keyword_args.iteritems(): 
-                    if name not in keyword_args:
-                        keyword_args[name] = arg 
+                for name, arg in base._named_args.iteritems():
+                    if name not in named_args:
+                        named_args[name] = arg
 
         attrs['_positional_args'] = positional_args
-        attrs['_keyword_args'] = keyword_args
+        attrs['_named_args'] = named_args
         attrs['_args'] = dict(all_args)
 
         attrs['name'] = tag_name
@@ -106,15 +106,15 @@ class TemplateTag(template.Node):
         self._vars = {}
         tokens = list(utils.smarter_split(token.contents))[1:]
         self._process_positional_args(parser, tokens)
-        self._process_keyword_args(parser, tokens)
+        self._process_named_args(parser, tokens)
         if self.block:
             self.nodelist = parser.parse(('end%s' % (self.name,),))
             parser.delete_first_token()
 
     def _process_positional_args(self, parser, tokens):
-        keywords = self._keyword_args.keys()
+        valid_arg_names = self._named_args.keys()
         for arg in self._positional_args:
-            value = arg.consume(parser, tokens, keywords)
+            value = arg.consume(parser, tokens, valid_arg_names)
             if value is None:
                 if arg.default is not None:
                     self._vars[arg.name] = arg.default
@@ -128,29 +128,45 @@ class TemplateTag(template.Node):
             else:
                 self._vars[arg.name] = value
 
-    def _process_keyword_args(self, parser, tokens):
-        keywords = self._keyword_args.keys()
+    def _process_named_args(self, parser, tokens):
+        named_args = [arg.keyword and '%s=' % name or name
+                      for name, arg in self._named_args.iteritems()]
 
         while tokens:
-            keyword = tokens.pop(0)
+            arg_name = tokens[0]
+            keyword = '=' in arg_name
+            if keyword:
+                arg_name, tokens[0] = arg_name.split('=', 1)
+            else:
+                del tokens[0]
             try:
-                arg = self._keyword_args[keyword]
+                arg = self._named_args[arg_name]
             except KeyError:
                 raise template.TemplateSyntaxError(
-                    "'%s' does not take argument '%s'" % (self.name, keyword)
+                    "'%s' does not take argument '%s'" % (self.name, arg_name)
                 )
-            value = arg.consume(parser, tokens, keywords)
+            if not keyword and arg.keyword:
+                raise template.TemplateSyntaxError(
+                    "'%s' expected '%s=...'" % (self.name, arg_name)
+                )
+            if keyword and not arg.keyword:
+                raise template.TemplateSyntaxError(
+                    "'%s' didn't expect an '=' after '%s'" % (self.name,
+                                                              arg_name)
+                )
+
+            value = arg.consume(parser, tokens, named_args)
             self._vars[arg.name] = value
 
         # Handle missing items: required, default.
-        for keyword, arg in self._keyword_args.iteritems():
+        for arg_name, arg in self._named_args.iteritems():
             if arg.name in self._vars:
                 continue
             if arg.default is not None:
                 self._vars[arg.name] = arg.default
             elif arg.required:
                 raise template.TemplateSyntaxError(
-                    "'%s' argument to '%s' is required" % (keyword, self.name)
+                    "'%s' argument to '%s' is required" % (arg_name, self.name)
                 )
 
     def clean(self, data):

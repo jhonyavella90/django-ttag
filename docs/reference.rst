@@ -125,7 +125,7 @@ dictionary containing the values of the tag's arguments.
 Arguments
 ---------
 
-Arguments can be either positional or keyword. They are specified as properties
+Arguments can be either positional or named. They are specified as properties
 of the tag class, in a similar way to Django's forms and models.
 
 If the property name clashes with a append a trailing slash - it will be
@@ -163,34 +163,41 @@ readability (this Arg assumes ``positional=True``)::
         to = tagcon.ConstantArg()
         finish = tagcon.Arg(positional=True)
 
-Keyword arguments
-~~~~~~~~~~~~~~~~~
+Named arguments
+~~~~~~~~~~~~~~~
 
-Keyword arguments can appear in any order in a tag's arguments, after the
+Named arguments can appear in any order in a tag's arguments, after the
 positional arguments.  They are specified as follows::
 
-    class KeywordTag(tagcon.TemplateTag):
+    class NamedTag(tagcon.TemplateTag):
         limit = tagcon.Arg(required=False)
         offset = tagcon.Arg(required=False)
 
-This would create a tag named ``keyword`` which took two optional arguments,
+This would create a tag named ``named`` which took two optional arguments,
 ``limit`` and ``offset``.  They could be specified in any order::
 
-    {% keyword %}
+    {% named %}
 
-    {% keyword limit 10 %}
+    {% named limit 10 %}
 
-    {% keyword offset 25 %}
+    {% named offset 25 %}
 
-    {% keyword limit 15 offset 42 %}
+    {% named limit 15 offset 42 %}
 
-    {% keyword offset 4 limit 12 %}
+    {% named offset 4 limit 12 %}
+
+If you prefer "keyword" style named arguments (e.g. ``{% named offset=25 %},
+you can use the ``keyword`` parameter::
+
+    class NamedTag(tagcon.TemplateTag):
+        limit = tagcon.Arg(required=False, keyword=True)
+        offset = tagcon.Arg(required=False, keyword=True)
 
 If an optional argument is not specified in the template, it will not be
 added to the data dictionary. Alternately, use ``default`` to have a default
 value added to the data dictionary if an argument is not provided::
 
-    class KeywordTag(tagcon.TemplateTag):
+    class NamedTag(tagcon.TemplateTag):
         limit = tagcon.Arg(default=100)
         offset = tagcon.Arg(required=False)
 
@@ -242,6 +249,16 @@ positional
 
 Whether this is a positional tag (i.e. the argument name is not part of the tag
 definition).  
+
+Defaults to ``False``.
+
+keyword
+~~~~~~~
+
+Use an equals to separate the value from the argument name, rather than the
+standard space separation.
+
+This parameter is only used for named arguments (i.e. ``positional=False``).
 
 Defaults to ``False``.
 

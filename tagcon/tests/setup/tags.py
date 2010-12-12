@@ -6,20 +6,17 @@ from tagcon.tests.setup import models
 register = template.Library()
 
 
-class KeywordTag(tagcon.TemplateTag):
+class NamedArgTag(tagcon.TemplateTag):
     limit = tagcon.IntegerArg(default=5)
-
-    def output(self, data):
-        return 'The limit is %d' % data['limit']
-
-
-class KeywordNoDefaultTag(tagcon.TemplateTag):
-    limit = tagcon.IntegerArg()
 
     def output(self, data):
         if 'limit' in data:
             return 'The limit is %d' % data['limit']
         return 'No limit was specified'
+
+
+class NamedKeywordArgTag(NamedArgTag):
+    limit = tagcon.IntegerArg(keyword=True)
 
 
 class NoArgumentTag(tagcon.TemplateTag):

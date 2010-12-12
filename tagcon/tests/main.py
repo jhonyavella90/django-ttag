@@ -15,29 +15,33 @@ def render(contents, extra_context=None):
 
 class TagExecutionTests(TestCase):
 
-    def test_no_args(self):
+    def test_default(self):
         """
-        A tag with keyword arguments works with or without the argument as long
+        A tag with named arguments works with or without the argument as long
         as a default value is set.
         """
-
-        self.assertEqual(render('{% keyword limit 200 %}'),
-                         'The limit is 200')
-
-        self.assertEqual(render('{% keyword %}'),
+        self.assertEqual(render('{% named_arg %}'),
                          'The limit is %d' %
-                         tags.KeywordTag._args['limit'].default)
+                         tags.NamedArgTag._args['limit'].default)
 
-        self.assertRaises(template.TemplateSyntaxError, render,
-                          '{% keyword_no_default %}')
+        tags.NamedArgTag._args['limit'].default = None
 
-    def test_args_format(self):
-        """keyword argument syntax is {% tag arg value %}"""
+        self.assertRaises(template.TemplateSyntaxError, render, '{% named_arg %}')
+
+    def test_named(self):
+        """
+        Standard named argument syntax is ``{% tag arg value %}``
+        """
+        self.assertEqual(render('{% named_arg limit 200 %}'),
+                         'The limit is 200')
         self.assertRaises(template.TemplateSyntaxError, template.Template,
-                          '{% keyword limit=25 %}')
+                          '{% named_arg limit=25 %}')
 
+    def test_named_keyword(self):
+        self.assertEqual(render('{% named_keyword_arg limit=100 %}'),
+                         'The limit is 100')
         self.assertRaises(template.TemplateSyntaxError, template.Template,
-                          "{% keyword limit='25' %}")
+                          "{% named_keyword_arg limit 15 %}")
 
     def test_handle_args(self):
         """tags with no arguments take no arguments"""
@@ -73,7 +77,7 @@ class PositionalTest(TestCase):
 
     def test_positional_mixed(self):
         """
-        Test that positional arguments work, mixed with keyword arguments.
+        Test that positional arguments work, mixed with named arguments.
         """
         self.assertEqual(render('{% positional_mixed 1 as a%}x{{ a }}'), 'x1')
         self.assertEqual(render('{% positional_mixed var as a%}x{{ a }}',

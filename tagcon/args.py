@@ -8,64 +8,69 @@ class Arg(object):
     """
     A template tag argument used for parsing and validation.
 
-    This is the base class for all other argument types.  Behavior can be
-    defined via the following constructor arguments:
-
-    ``required``
-        Whether the argument is required as part of the tag definition in the
-        template. Required positional arguments can not occur after optional
-        ones.
-
-        Defaults to ``True``.
-
-    ``default``
-        The default value for this argument if it is not specified.
-
-        If ``None`` and the field is required, an exception will be raised when
-        the template is parsed.
-
-        Defaults to ``None``.
-
-    ``null``
-        Determines whether a value of ``None`` is an acceptable value for the
-        argument resolution.
-
-        When set to ``False``, a value of ``None`` or a missing context
-        variable will cause a ``TemplateTagValidationError`` when this argument
-        is cleaned.
-
-        Defaults to ``False``.
-
-    ``positional``
-        Whether this is a positional tag (i.e. the argument name is not part of the tag
-        definition).
-
-        Defaults to ``False``.
+    This is the base class for all other argument types, but this class can
+    still be used directly for generic arguments.
     """
     # Tracks each time an Arg instance is created. Used to retain order.
     creation_counter = 0
 
     def __init__(self, required=True, default=None, null=False,
-                 positional=False):
+                 positional=False, keyword=False):
         """
-        ``required`` and ``default`` are mutually exclusive.
+        :param required:
+            Whether the argument is required as part of the tag definition in
+            the template. Required positional arguments can not occur after
+            optional ones.
+
+            Defaults to ``True``.
+
+        :param default:
+            The default value if this argument is not specified in the tag.
+
+            Defaults to ``None``.
+
+        :param null:
+            Determines whether a value of ``None`` is an acceptable value for
+            the argument resolution.
+
+            When set to ``False``, a value of ``None`` or a missing context
+            variable will cause a ``TemplateTagValidationError`` when this
+            argument is cleaned.
+
+            Defaults to ``False``.
+
+        :param positional:
+            Whether this is a positional tag (i.e. the argument name is not
+            part of the tag definition).
+
+            Defaults to ``False``.
+
+        :param keyword:
+            Use an equals to separate the value from the argument name, rather
+            than the standard space separation.
+
+            This parameter is only used for named arguments (i.e.
+            ``positional=False``).
+
+            Defaults to ``False``.
         """
         self.required = required
         self.default = default
         self.null = null
         self.positional = positional
+        self.keyword = keyword
 
         # Increase the creation counter, and save our local copy.
         self.creation_counter = Arg.creation_counter
         Arg.creation_counter += 1
 
-    def consume(self, parser, tokens, keywords):
+    def consume(self, parser, tokens, valid_named_args):
         """
         Return the values that this argument should capture.
 
         :param tokens: A list of available tokens for consumption in the tag.
-        :param keywords: A list of other keywords which are valid for the
-            tag. 
+        :param valid_named_args: A list of other valid named arguments for the
+            tag.
 
         This method may be overridden by subclasses to change the behaviour of
         the argument, in which case the :meth:`resolve` may also need to be
@@ -78,23 +83,38 @@ class Arg(object):
         if self.required:
             # The default consume method consumes exactly one argument.
             # Therefore, if the argument is required it doesn't matter if it
-            # clashes with a keyword, don't pass keywords on.
-            keywords = ()
-        value = self.consume_one(tokens, self.required, keywords)
+            # clashes with a named argument so don't pass valid_named_args on.
+            valid_named_args = ()
+        value = self.consume_one(tokens, self.required, valid_named_args)
         if value:
             return self.compile_filter(parser, value)
 
-    def consume_one(self, tokens, required, keywords=()):
+    def consume_one(self, tokens, required, valid_named_args=()):
         """
         Consume a single token, raising an error if it's required.
 
-        If the next token matches on in ``keywords``, it won't be consumed.
+        If the next token matches on in ``valid_named_args``, it won't be
+        consumed.
         """
-        if tokens and tokens[0] not in keywords:
+        if tokens and not self.is_token_named_arg(tokens[0], valid_named_args):
             return tokens.pop(0)
         if required:
             raise TemplateSyntaxError("Value for '%s' not provided" %
                                       self.name)
+
+    def is_token_named_arg(self, token, valid_named_args):
+        """
+        Check to see if the token is a valid named argument.
+        
+        :param valid_named_args: List of valid arguments.
+
+            Keyword named arguments must be in the format ``'name='`` so they
+            can be differentiated from standard named arguments.
+        """
+        keyword_token = token.find('=')
+        if keyword_token != -1:
+            token = token[keyword_token + 1]
+        return token in valid_named_args
 
     def compile_filter(self, parser, value):
         return parser.compile_filter(value)
@@ -184,7 +204,7 @@ class BooleanArg(Arg):
         """
         super(BooleanArg, self).__init__(required=required, *args, **kwargs)
 
-    def consume(self, parser, tokens, keywords):
+    def consume(self, parser, tokens, valid_named_args):
         """
         Simply return ``True``, not consuming any ``tokens``.
         """
@@ -243,15 +263,15 @@ class ConstantArg(BasicArg):
 
     def __init__(self, *args, **kwargs):
         """
-        The positional keyword argument is ignored and always set to ``True``.
+        The ``positional`` parameter is ignored and always set to ``True``.
         """
         super(ConstantArg, self).__init__(*args, **kwargs)
         self.positional = True
 
     def consume(self, *args, **kwargs):
         """
-        Consume the Ensure the ``value`` matches the :attr:`name` of this
-        argument.
+        Consume the next token, ensuring its value matches the :attr:`name` of
+        this argument.
         """
         value = super(ConstantArg, self).consume(*args, **kwargs)
         if value != self.name:
@@ -298,7 +318,7 @@ class ModelInstanceArg(IsInstanceArg):
     Validates that the passed in value is an instance of the specified
     ``Model`` class.
 
-    It takes a single additional named argument, ``model``.
+    It takes a single additional keyword argument, ``model``.
     """
 
     def __init__(self, *args, **kwargs):
@@ -344,7 +364,7 @@ class KeywordsArg(Arg):
         self.verbose = kwargs.pop('verbose', False)
         super(KeywordsArg, self).__init__(*args, **kwargs)
 
-    def consume(self, parser, tokens, keywords):
+    def consume(self, parser, tokens, valid_named_args):
         """
         Consume one or more keyword arguments.
         """
