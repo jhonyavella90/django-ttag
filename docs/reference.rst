@@ -1,104 +1,68 @@
-=======================
-django-tagcon reference
-=======================
+==============
+TTag reference
+==============
 
 
 Overview
 ========
 
-Django-Tagcon replaces the normal method of creating custom template tags.  It
-uses a custom template ``Node`` subclass, ``TemplateTag``, which handles all of
+TTag replaces the normal method of creating custom template tags.  It
+uses a custom template ``Node`` subclass called ``Tag`` which handles all of
 the relevant aspects of a tag: defining and parsing arguments, handling
-validation, resolving variables from the context, and rendering output.  It
-tries to make the most common cases extremely simple, while making even complex
-cases easier than they would be otherwise.
-
-``TemplateTag`` and the various ``Arg`` classes are consciously modeled after
-Django's ``Model``, ``Form``, and respective ``Field`` classes.  ``Arg``s are
-set on a ``TemplateTag`` in the same way ``Field``s would be set on a
-``Model`` or ``Form``.
+validation, resolving variables from the context, and rendering output.
 
 
-TemplateTag
-===========
+Tag
+===
 
-A minimal ``TemplateTag`` might look like this::
+.. class:: ttag.Tag
 
-    from django import template
-    import tagcon
+    A representation of a template tag. For example::
 
-    register = template.Library()
-
-
-    class CustomTag(tagcon.TemplateTag):
-
-        def output(self, data):
-            return "Hi there!"
-
-This would create a tag ``{% custom %}`` which took no arguments and output
-``Hi there!``.  Tag naming is automatically based off of the class name, but
-can be overridden (see the `Meta options`_ below).  The library can likewise
-be explicitly specified, but in most cases automatically using the module's
-``register`` library will do what is wanted anyway.
-
+	    class Welcome(ttag.Tag):
+	
+	        def output(self, data):
+	            return "Hi there!"
 
 Meta options
 ------------
 
-A ``TemplateTag`` can take various options via a ``Meta`` inner class::
+A ``Tag`` can take options via a ``Meta`` inner class::
 
-    class FoobarTag(tagcon.TemplateTag):
+    class Welcome(ttag.Tag):
 
         class Meta:
-            name = "special"
+            name = "hi"
 
-        def output(self, data):
-            return "Yes, I'm special."
+.. attribute:: ttag.Tag.Meta.name
 
-This would create a tag ``{% special %}``, rather than ``{% foobar %}``.
+    Explicitly choose a name for the tag. If not given, the tag's name will be
+	created by taking the class's name and converting it from CamelCase to
+	under_score format. For example, ``AmazingStuff`` would turn into
+	``{% amazing_stuff %}``.
 
-The various ``Meta`` options follow.
+.. attribute:: ttag.Tag.Meta.register
 
+    Register the tag in a tag library.
+    
+    Alternatively, a tag can still be rendered the standard way:
+    ``some_library.tag(ThisTag)``.
 
-name
-~~~~
+.. attribute:: ttag.Tag.Meta.block
 
-As shown above, ``name`` lets you explicitly choose a name for your tag.  If
-``name`` is not given, the tag's name will be created by taking the class's
-name and converting it from CamelCase to under_score format, with any trailing
-``Tag`` in the class name ignored.  Thus ``KittyCatTag`` would become.
-``{% kitty_cat %}``, and ``AmazingStuff`` would turn into
-``{% amazing_stuff %}``.
-
-
-library
-~~~~~~~
-
-Explicitly specify a tag library to register this tag with.  As long as the tag
-is defined in a normal tag module with a ``register = template.Library()``
-line, this shouldn't be necessary.
-
-If the module doesn't contain a tag library named ``register`` and a library is
-not explicitly specified, the tag can still be explicitly registered using the
-standard library ``register`` method::
-
-    my_tag_library.register(MyTag.name, MyTag) 
-
-silence_errors
-~~~~~~~~~~~~~~
-
-Whether to ignore exceptions raised by the tag, returning the settings'
-``TEMPLATE_STRING_IS_INVALID`` string or ``''``.  This is ``False`` by default
-at the moment, although this may change.
-
+    Retrieve subsequent template nodes until ``{% end[tagname] %}``, adding
+    them to ``self.nodelists``.
 
 output
 ------
 
-If your tag does not modify the output, override this method to 
+If your tag does not modify the output, override this method to change the
+output of this tag. 
 
-Either this method or the ``render`` method must be overridden on
-``TemplateTag`` subclasses.
+.. method:: .output(self, data)
+
+    :param data: A dictionary of data built from the arguments this tag uses,
+    	usually built by the :meth:`resolve` method.
 
 render
 ------
@@ -107,23 +71,28 @@ As an alternative to overriding the ``output`` method, a ``TemplateTag``
 subclass may directly override the ``render`` method. This is useful for
 when you want to alter the context.
 
-This method takes a template ``context`` as a required argument.
+.. method:: .render(self, context)
 
-``render`` must return a unicode string.
-If your tag doesn't return anything (e.g., it only manipulates the context),
-``render`` can simply return an empty string.
+	:param context: The current template context.
+
+    ``render`` must return a unicode string.
+
+    If your tag doesn't return anything (e.g., it only manipulates the
+    context), ``render`` should simply return an empty string.
 
 To retrieve the values of the tag's arguments, if any, use the following method
 inside ``render``::
 
-    data = self.resolve(context)
+.. method:: .resolve(self, context)
 
-This will perform any context resolution if necessary, and return a data
-dictionary containing the values of the tag's arguments.
+	Retrieve the values of the tag's arguments.
+	
+	:param context: The current template context.
+	:returns: A data dictionary containing the values of the tag's arguments.
 
 
 Arguments
----------
+=========
 
 Arguments can be either positional or named. They are specified as properties
 of the tag class, in a similar way to Django's forms and models.
@@ -132,9 +101,9 @@ If the property name clashes with a append a trailing slash - it will be
 removed from the argument's ``name``. For example, pay attention to the ``as_``
 argument in the tag below::
 
-    class SetTag(tagcon.TemplateTag):
-        value = tagcon.Arg(positional=True)
-        as_ = tagcon.BasicArg()
+    class SetTag(ttag.Tag):
+        value = ttag.Arg(positional=True)
+        as_ = ttag.BasicArg()
         
         def render(self, context):
             data = self.resolve(context)
@@ -147,9 +116,9 @@ Positional arguments
 
 An argument may be marked as positional by using the ``positional`` flag::  
 
-    class PositionalTag(tagcon.TemplateTag):
-        first = tagcon.Arg(positional=True)
-        second = tagcon.Arg(positional=True)
+    class PositionalTag(ttag.Tag):
+        first = ttag.Arg(positional=True)
+        second = ttag.Arg(positional=True)
 
 This would result in a tag named ``positional`` which took two required
 arguments, which would be assigned to ``'first'`` and ``'second'`` items
@@ -158,10 +127,10 @@ of the data dictionary returned by the ``resolve`` method.
 Use the ``ConstantArg`` for simple required string-based arguments which assist
 readability (this Arg assumes ``positional=True``)::
 
-    class MeasureTag(tagcon.TemplateTag):
-        start = tagcon.Arg(positional=True)
-        to = tagcon.ConstantArg()
-        finish = tagcon.Arg(positional=True)
+    class MeasureTag(ttag.Tag):
+        start = ttag.Arg(positional=True)
+        to = ttag.ConstantArg()
+        finish = ttag.Arg(positional=True)
 
 Named arguments
 ~~~~~~~~~~~~~~~
@@ -169,9 +138,9 @@ Named arguments
 Named arguments can appear in any order in a tag's arguments, after the
 positional arguments.  They are specified as follows::
 
-    class NamedTag(tagcon.TemplateTag):
-        limit = tagcon.Arg(required=False)
-        offset = tagcon.Arg(required=False)
+    class NamedTag(ttag.Tag):
+        limit = ttag.Arg(required=False)
+        offset = ttag.Arg(required=False)
 
 This would create a tag named ``named`` which took two optional arguments,
 ``limit`` and ``offset``.  They could be specified in any order::
@@ -189,17 +158,17 @@ This would create a tag named ``named`` which took two optional arguments,
 If you prefer "keyword" style named arguments (e.g. ``{% named offset=25 %},
 you can use the ``keyword`` parameter::
 
-    class NamedTag(tagcon.TemplateTag):
-        limit = tagcon.Arg(required=False, keyword=True)
-        offset = tagcon.Arg(required=False, keyword=True)
+    class NamedTag(ttag.Tag):
+        limit = ttag.Arg(required=False, keyword=True)
+        offset = ttag.Arg(required=False, keyword=True)
 
 If an optional argument is not specified in the template, it will not be
 added to the data dictionary. Alternately, use ``default`` to have a default
 value added to the data dictionary if an argument is not provided::
 
-    class NamedTag(tagcon.TemplateTag):
-        limit = tagcon.Arg(default=100)
-        offset = tagcon.Arg(required=False)
+    class NamedTag(ttag.Tag):
+        limit = ttag.Arg(default=100)
+        offset = ttag.Arg(required=False)
 
 
 Argument Types
@@ -270,8 +239,8 @@ A simpler argument which doesn't compile its value as a ``FilterExpression``.
 
 Example usage::
 
-    class GetUsersTag(tagcon.TemplateTag)
-        as_ = tagcon.BasicArg()
+    class GetUsers(ttag.Tag)
+        as_ = ttag.BasicArg()
 
         def render(self, context)
             data = self.resolve(data)
@@ -302,8 +271,8 @@ resolved data dictionary.
 
 For example::
 
-    class CoolTag(tagcon.TemplateTag)
-        cool = tagcon.BooleanArg()
+    class CoolTag(ttag.Tag)
+        cool = ttag.BooleanArg()
 
         def output(self, data):
             if 'cool' in data:
@@ -388,20 +357,19 @@ Full Example
 ============
 
 This example provides a template tag which outputs a tweaked version of the
-instance name passed in.  It demonstrates using the various ``Arg`` types to
-have tagcon do the hard work for you::
+instance name passed in.  It demonstrates using the various ``Arg`` types::
 
-    class TweakName(tagcon.TemplateTag):
+    class TweakName(ttag.Tag):
         """
         Provides the tweak_name template tag, which outputs a
         slightly modified version of the NamedModel instance passed in.
 
         {% tweak_name instance [offset=0] [limit=10] [reverse] %}
         """
-		instance = tagcon.ModelInstanceArg(positional=True, model=NamedModel))
-        offset = tagcon.IntegerArg(default=0)
-        limit = tagcon.IntegerArg(default=10)
-        reverse = tagcon.BooleanArg()
+		instance = ttag.ModelInstanceArg(positional=True, model=NamedModel))
+        offset = ttag.IntegerArg(default=0, keyword=True)
+        limit = ttag.IntegerArg(default=10, keyword=True)
+        reverse = ttag.BooleanArg()
 
         def output(self, data):
             name = data['instance'].name
@@ -412,7 +380,7 @@ have tagcon do the hard work for you::
 
             # check that limit is not < 0
             if data['limit'] < 0:
-                raise tagcon.TemplateTagValidationError("limit must be >= 0")
+                raise ttag.TagValidationError("limit must be >= 0")
 
             # apply our offset and limit
             name = name[data['offset']:data['limit']]
@@ -422,10 +390,10 @@ have tagcon do the hard work for you::
 
 Example usages::
 
-    {% tweak_name obj limit 5 %}
+    {% tweak_name obj limit=5 %}
 
-    {% tweak_name obj offset 1 %}
+    {% tweak_name obj offset=1 %}
 
     {% tweak_name obj reverse %}
 
-    {% tweak_name obj offset 1 limit 5 reverse %}
+    {% tweak_name obj offset=1 limit=5 reverse %}

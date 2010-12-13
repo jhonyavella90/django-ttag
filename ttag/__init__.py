@@ -1,10 +1,17 @@
-import sys
-if sys.version_info[0] == 3:
-    raise SystemExit("Django-Tagcon does not yet support Python 3")
-if sys.version_info[0] != 2 or sys.version_info[1] < 5:
-    raise SystemExit("Django-Tagcon requires Python 2.5 or greater")
-del sys
+from ttag.args import Arg, BasicArg, BooleanArg, ConstantArg, DateArg, \
+    DateTimeArg, IntegerArg, IsInstanceArg, KeywordsArg, ModelInstanceArg
+from ttag.base import Tag
+from ttag.exceptions import TagArgumentMissing, TagValidationError
 
-from tagcon.base import TemplateTag
-from tagcon.exceptions import *
-from tagcon.args import *
+VERSION = (1, 0, 'alpha')
+
+
+def get_version():
+    version = [VERSION[0]]
+    number = True
+    for bit in VERSION[1:]:
+        if not isinstance(bit, int):
+            number = False
+        version.append(number and '.' or '-')
+        version.append(bit)
+    return ''.join(version)

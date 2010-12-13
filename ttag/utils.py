@@ -26,8 +26,5 @@ def smarter_split(input):
             yield hit
 
 
-def get_tag_name(class_name):
-    name = CLASS_NAME_RE.sub(r'_\1', class_name).lower().strip('_')
-    if name.endswith('_tag'):
-        name = name[:-4]
-    return name
+def get_default_name(class_name):
+    return CLASS_NAME_RE.sub(r'_\1', class_name).lower().strip('_')

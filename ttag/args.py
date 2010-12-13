@@ -1,7 +1,7 @@
 import datetime
 import re
 from django.template import TemplateSyntaxError, FilterExpression
-from tagcon.exceptions import TemplateTagValidationError
+from ttag.exceptions import TagValidationError
 
 
 class Arg(object):
@@ -34,7 +34,7 @@ class Arg(object):
             the argument resolution.
 
             When set to ``False``, a value of ``None`` or a missing context
-            variable will cause a ``TemplateTagValidationError`` when this
+            variable will cause a ``TagValidationError`` when this
             argument is cleaned.
 
             Defaults to ``False``.
@@ -139,7 +139,7 @@ class Arg(object):
         Subclasses should override :meth:`clean` instead of this method.
         """
         if not self.null and value is None:
-            raise TemplateTagValidationError(
+            raise TagValidationError(
                 "Value for '%s' must not be null." % self.name
             )
         return self.clean(value)
@@ -150,7 +150,7 @@ class Arg(object):
 
         This method is often overridden or extended by subclasses to alter or
         perform further validation of the value, raising
-        ``TemplateTagValidationError`` as necessary.
+        ``TagValidationError`` as necessary.
         """
         return value
 
@@ -162,8 +162,8 @@ class BasicArg(Arg):
 
     Example usage::
 
-        class GetUsersTag(tagcon.TemplateTag)
-            as_ = tagcon.BasicArg()
+        class GetUsersTag(ttag.Tag)
+            as_ = ttag.BasicArg()
 
             def render(self, context)
                 data = self.resolve(data)
@@ -187,8 +187,8 @@ class BooleanArg(Arg):
 
     For example::
 
-        class CoolTag(tagcon.TemplateTag)
-            cool = tagcon.BooleanArg()
+        class Cool(ttag.Tag)
+            cool = ttag.BooleanArg()
 
             def output(self, data):
                 if 'cool' in data:
@@ -224,7 +224,7 @@ class IntegerArg(Arg):
         try:
             value = int(value)
         except (TypeError, ValueError):
-            raise TemplateTagValidationError(
+            raise TagValidationError(
                 "Value for '%s' must be an integer (got %r)" % (self.name,
                                                                 value)
             )
@@ -252,7 +252,7 @@ class IsInstanceArg(Arg):
                                       "attribute.")
         if not isinstance(value, self.cls):
             class_name = '%s.%s' % (self.cls.__module__, self.cls.__name__)
-            raise TemplateTagValidationError(
+            raise TagValidationError(
                 self.error_message % {'arg_name': self.name, 'value': value,
                                       'class_name': class_name}
             )

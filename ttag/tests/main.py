@@ -3,8 +3,8 @@ import datetime
 from django.test import TestCase
 from django import template
 
-import tagcon
-from tagcon.tests.setup import tags, models
+import ttag
+from ttag.tests.setup import tags, models
 
 template.add_to_builtins(tags.__name__)
 
@@ -22,9 +22,9 @@ class TagExecutionTests(TestCase):
         """
         self.assertEqual(render('{% named_arg %}'),
                          'The limit is %d' %
-                         tags.NamedArgTag._args['limit'].default)
+                         tags.NamedArg._args['limit'].default)
 
-        tags.NamedArgTag._args['limit'].default = None
+        tags.NamedArg._args['limit'].default = None
 
         self.assertRaises(template.TemplateSyntaxError, render, '{% named_arg %}')
 
@@ -57,9 +57,9 @@ class TagExecutionTests(TestCase):
 
 def build_invalid_positional_optional():
 
-    class Tag(tagcon.TemplateTag):
-        start = tagcon.Arg(positional=True, required=False)
-        end = tagcon.Arg(positional=True)
+    class Tag(ttag.Tag):
+        start = ttag.Arg(positional=True, required=False)
+        end = ttag.Arg(positional=True)
 
 
 class PositionalTest(TestCase):
@@ -108,11 +108,11 @@ class TestArgumentTypes(TestCase):
         self.assertEqual(render(content, {'object': object}),
                          unicode(object))
 
-        self.assertRaises(tagcon.TemplateTagValidationError, render, content,
+        self.assertRaises(ttag.TagValidationError, render, content,
                           {'object': int()})
 
         # Fail if the variable isn't in the context.
-        self.assertRaises(tagcon.TemplateTagValidationError, render, content)
+        self.assertRaises(ttag.TagValidationError, render, content)
 
     def test_integer_arg(self):
         self.assertEqual(render('{% argument_type age 101 %}'), '101')
@@ -124,13 +124,13 @@ class TestArgumentTypes(TestCase):
         self.assertEqual(render('{% argument_type age a %}', {'a': '7'}), '7')
 
         # Fail if value or variable can't be resolved as an integer.
-        self.assertRaises(tagcon.TemplateTagValidationError, render,
+        self.assertRaises(ttag.TagValidationError, render,
                           '{% argument_type age "7b" %}')
-        self.assertRaises(tagcon.TemplateTagValidationError, render,
+        self.assertRaises(ttag.TagValidationError, render,
                           '{% argument_type age age %}', {'age': 'NaN'})
 
         # Fail if the variable isn't in the context.
-        self.assertRaises(tagcon.TemplateTagValidationError, render,
+        self.assertRaises(ttag.TagValidationError, render,
                           '{% argument_type age age %}')
 
     def test_string_arg(self):
@@ -144,13 +144,13 @@ class TestArgumentTypes(TestCase):
                          'Dave')
 
         # Fail if variable or value isn't a string.
-        self.assertRaises(tagcon.TemplateTagValidationError, render,
+        self.assertRaises(ttag.TagValidationError, render,
                           '{% argument_type name 123 %}')
-        self.assertRaises(tagcon.TemplateTagValidationError, render,
+        self.assertRaises(ttag.TagValidationError, render,
                           '{% argument_type name dave %}', {'dave': 1})
 
         # Fail if the variable isn't in the context.
-        self.assertRaises(tagcon.TemplateTagValidationError, render,
+        self.assertRaises(ttag.TagValidationError, render,
                           '{% argument_type name dave %}')
 
     def test_datetime_arg(self):
@@ -160,11 +160,11 @@ class TestArgumentTypes(TestCase):
                          '2010-01-09 22:33:47')
 
         # Fail if variable isn't a datetime.
-        self.assertRaises(tagcon.TemplateTagValidationError, render,
+        self.assertRaises(ttag.TagValidationError, render,
                           '{% argument_type datetime dt %}', {'dt': 'NaN'})
 
         # Fail if the variable isn't in the context.
-        self.assertRaises(tagcon.TemplateTagValidationError, render,
+        self.assertRaises(ttag.TagValidationError, render,
                           '{% argument_type datetime dt %}')
 
     def test_date_arg(self):
@@ -173,11 +173,11 @@ class TestArgumentTypes(TestCase):
                          '2010-01-09')
 
         # Fail if variable isn't a datetime.
-        self.assertRaises(tagcon.TemplateTagValidationError, render,
+        self.assertRaises(ttag.TagValidationError, render,
                           '{% argument_type date d %}', {'d': 'NaN'})
 
         # Fail if the variable isn't in the context.
-        self.assertRaises(tagcon.TemplateTagValidationError, render,
+        self.assertRaises(ttag.TagValidationError, render,
                           '{% argument_type date d %}')
 
     def test_time_arg(self):
@@ -186,11 +186,11 @@ class TestArgumentTypes(TestCase):
                          '22:33:47')
 
         # Fail if variable isn't a datetime.
-        self.assertRaises(tagcon.TemplateTagValidationError, render,
+        self.assertRaises(ttag.TagValidationError, render,
                           '{% argument_type time t %}', {'t': 'NaN'})
 
         # Fail if the variable isn't in the context.
-        self.assertRaises(tagcon.TemplateTagValidationError, render,
+        self.assertRaises(ttag.TagValidationError, render,
                           '{% argument_type time t %}')
 
     def test_flag_arg(self):

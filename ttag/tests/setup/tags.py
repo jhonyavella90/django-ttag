@@ -1,13 +1,13 @@
 from django import template
 
-import tagcon
-from tagcon.tests.setup import models
+import ttag
+from ttag.tests.setup import models
 
 register = template.Library()
 
 
-class NamedArgTag(tagcon.TemplateTag):
-    limit = tagcon.IntegerArg(default=5)
+class NamedArg(ttag.Tag):
+    limit = ttag.IntegerArg(default=5)
 
     def output(self, data):
         if 'limit' in data:
@@ -15,26 +15,26 @@ class NamedArgTag(tagcon.TemplateTag):
         return 'No limit was specified'
 
 
-class NamedKeywordArgTag(NamedArgTag):
-    limit = tagcon.IntegerArg(keyword=True)
+class NamedKeywordArg(NamedArg):
+    limit = ttag.IntegerArg(keyword=True)
 
 
-class NoArgumentTag(tagcon.TemplateTag):
+class NoArgument(ttag.Tag):
 
     def output(self, data):
         return 'No arguments here'
 
 
-class PositionalTag(tagcon.TemplateTag):
-    limit = tagcon.IntegerArg(default=5, positional=True)
+class Positional(ttag.Tag):
+    limit = ttag.IntegerArg(default=5, positional=True)
 
     def output(self, data):
         return '%s' % data['limit']
 
 
-class PositionalMixedTag(tagcon.TemplateTag):
-    limit = tagcon.IntegerArg(default=5, positional=True)
-    as_ = tagcon.BasicArg()
+class PositionalMixed(ttag.Tag):
+    limit = ttag.IntegerArg(default=5, positional=True)
+    as_ = ttag.BasicArg()
 
     def render(self, context):
         data = self.resolve(context)
@@ -42,9 +42,9 @@ class PositionalMixedTag(tagcon.TemplateTag):
         return ''
 
 
-class PositionalOptionalTag(tagcon.TemplateTag):
-    start = tagcon.IntegerArg(positional=True)
-    finish = tagcon.IntegerArg(positional=True, required=False)
+class PositionalOptional(ttag.Tag):
+    start = ttag.IntegerArg(positional=True)
+    finish = ttag.IntegerArg(positional=True, required=False)
 
     def output(self, data):
         if 'finish' in data:
@@ -54,10 +54,10 @@ class PositionalOptionalTag(tagcon.TemplateTag):
         return ','.join([str(i) for i in range(start, finish)])
 
 
-class PositionalOptionalMixedTag(tagcon.TemplateTag):
-    start = tagcon.IntegerArg(positional=True)
-    finish = tagcon.IntegerArg(positional=True, required=False)
-    step = tagcon.IntegerArg()
+class PositionalOptionalMixed(ttag.Tag):
+    start = ttag.IntegerArg(positional=True)
+    finish = ttag.IntegerArg(positional=True, required=False)
+    step = ttag.IntegerArg()
 
     def output(self, data):
         if 'finish' in data:
@@ -67,14 +67,14 @@ class PositionalOptionalMixedTag(tagcon.TemplateTag):
         return ','.join([str(i) for i in range(start, finish, data['step'])])
 
 
-class ArgumentTypeTag(tagcon.TemplateTag):
-    age = tagcon.IntegerArg(required=False)
-    name_ = tagcon.StringArg(required=False)
-    url = tagcon.ModelInstanceArg(model=models.Link, required=False)
-    date = tagcon.DateArg(required=False)
-    time = tagcon.TimeArg(required=False)
-    datetime = tagcon.DateTimeArg(required=False)
-    flag = tagcon.BooleanArg()
+class ArgumentType(ttag.Tag):
+    age = ttag.IntegerArg(required=False)
+    name_ = ttag.StringArg(required=False)
+    url = ttag.ModelInstanceArg(model=models.Link, required=False)
+    date = ttag.DateArg(required=False)
+    time = ttag.TimeArg(required=False)
+    datetime = ttag.DateTimeArg(required=False)
+    flag = ttag.BooleanArg()
 
     def output(self, data):
         order = 'name age url date time datetime'.split()
@@ -84,16 +84,16 @@ class ArgumentTypeTag(tagcon.TemplateTag):
         return u' '.join(values)
 
 
-class ConstantTag(tagcon.TemplateTag):
-    start = tagcon.Arg(positional=True)
-    to = tagcon.ConstantArg()
-    finish = tagcon.Arg(positional=True)
+class Constant(ttag.Tag):
+    start = ttag.Arg(positional=True)
+    to = ttag.ConstantArg()
+    finish = ttag.Arg(positional=True)
 
     def output(self, data):
         return '%s - %s' % (data['start'], data['finish'])
 
 
-class BaseIncludeTag(tagcon.TemplateTag):
+class BaseInclude(ttag.Tag):
     """
     A tag for testing KeywordsArg.
     """
@@ -108,16 +108,16 @@ class BaseIncludeTag(tagcon.TemplateTag):
         return out
 
 
-class IncludeCompactTag(BaseIncludeTag):
-    template = tagcon.Arg(positional=True)
-    with_ = tagcon.KeywordsArg(required=False)
+class IncludeCompact(BaseInclude):
+    template = ttag.Arg(positional=True)
+    with_ = ttag.KeywordsArg(required=False)
 
 
-class IncludeVerboseTag(BaseIncludeTag):
-    template = tagcon.Arg(positional=True)
-    with_ = tagcon.KeywordsArg(required=False, compact=False, verbose=True)
+class IncludeVerbose(BaseInclude):
+    template = ttag.Arg(positional=True)
+    with_ = ttag.KeywordsArg(required=False, compact=False, verbose=True)
 
 
-class IncludeMixedTag(BaseIncludeTag):
-    template = tagcon.Arg(positional=True)
-    with_ = tagcon.KeywordsArg(required=False, verbose=True)
+class IncludeMixed(BaseInclude):
+    template = ttag.Arg(positional=True)
+    with_ = ttag.KeywordsArg(required=False, verbose=True)
