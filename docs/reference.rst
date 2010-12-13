@@ -112,7 +112,7 @@ argument in the tag below::
             return ''
 
 Positional arguments
-~~~~~~~~~~~~~~~~~~~~
+--------------------
 
 An argument may be marked as positional by using the ``positional`` flag::  
 
@@ -133,7 +133,7 @@ readability (this Arg assumes ``positional=True``)::
         finish = ttag.Arg(positional=True)
 
 Named arguments
-~~~~~~~~~~~~~~~
+---------------
 
 Named arguments can appear in any order in a tag's arguments, after the
 positional arguments.  They are specified as follows::
@@ -338,7 +338,7 @@ Setting ``verbose=True`` and ``compact=False`` will require verbose format:
 
 	{% verbose with 1 as foo and 2 as bar %}
 
-If ``verbose=True`` and ``compact`` is left as ``True, then either (or even
+If ``verbose=True`` and ``compact`` is left as ``True``, then either (or even
 both) formats are allowed. This is usually only used for backwards
 compatibility::
 
