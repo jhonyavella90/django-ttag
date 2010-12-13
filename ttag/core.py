@@ -6,10 +6,10 @@ from ttag.args import Arg
 
 class Options(object):
 
-    def __init__(self, meta=None):
+    def __init__(self, meta=None, *args, **kwargs):
+        super(Options, self).__init__(*args, **kwargs)
         self.positional_args = []
         self.named_args = {}
-        self.args = {}
         self.name = getattr(meta, 'name', None)
         self.block = getattr(meta, 'block', False)
         self.end_block = getattr(meta, 'end_block', 'end%(name)s')
@@ -54,9 +54,8 @@ class DeclarativeArgsMetaclass(type):
                     for arg_name, obj in attrs.items() if isinstance(obj, Arg)]
         all_args.sort(key=lambda x: x[1].creation_counter)
 
+        # Put the positional and named arguments in their respective places.
         optional_positional = False
-
-        # Find and remove the arguments from attrs.
         for arg_name, arg in all_args:
             arg.name = arg_name
             if arg.positional:
@@ -73,7 +72,7 @@ class DeclarativeArgsMetaclass(type):
                     optional_positional = True
                 opts.positional_args.append(arg)
             else:
-                opts.named_args[name] = arg
+                opts.named_args[arg_name] = arg
 
         # If this class is subclassing another TemplateTag, add that tag's
         # positional arguments before ones declared here. The bases are looped
@@ -112,7 +111,7 @@ class BaseTag(template.Node):
         self._process_positional_args(parser, tokens)
         self._process_named_args(parser, tokens)
         if self._meta.block:
-            self.nodelist = parser.parse(('end%s' % (self.name,),))
+            self.nodelist = parser.parse(('end%s' % (self._meta.name,),))
             parser.delete_first_token()
 
     def _process_positional_args(self, parser, tokens):
@@ -126,7 +125,7 @@ class BaseTag(template.Node):
                     raise template.TemplateSyntaxError(
                         "'%s' positional argument to '%s' is required" % (
                             arg.name,
-                            self.name,
+                            self._meta.name,
                         )
                     )
             else:
@@ -147,15 +146,16 @@ class BaseTag(template.Node):
                 arg = self._meta.named_args[arg_name]
             except KeyError:
                 raise template.TemplateSyntaxError(
-                    "'%s' does not take argument '%s'" % (self.name, arg_name)
+                    "'%s' does not take argument '%s'" % (self._meta.name,
+                                                          arg_name)
                 )
             if not keyword and arg.keyword:
                 raise template.TemplateSyntaxError(
-                    "'%s' expected '%s=...'" % (self.name, arg_name)
+                    "'%s' expected '%s=...'" % (self._meta.name, arg_name)
                 )
             if keyword and not arg.keyword:
                 raise template.TemplateSyntaxError(
-                    "'%s' didn't expect an '=' after '%s'" % (self.name,
+                    "'%s' didn't expect an '=' after '%s'" % (self._meta.name,
                                                               arg_name)
                 )
 
@@ -170,7 +170,8 @@ class BaseTag(template.Node):
                 self._vars[arg.name] = arg.default
             elif arg.required:
                 raise template.TemplateSyntaxError(
-                    "'%s' argument to '%s' is required" % (arg_name, self.name)
+                    "'%s' argument to '%s' is required" % (arg_name,
+                                                           self._meta.name)
                 )
 
     def clean(self, data):
@@ -207,7 +208,7 @@ class BaseTag(template.Node):
         """
         data = {}
         for name, value in self._vars.iteritems():
-            arg = self._args[name]
+            arg = self._meta.args[name]
             value = arg.resolve(value, context)
             value = arg.base_clean(value)
             try:

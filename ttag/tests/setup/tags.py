@@ -1,12 +1,27 @@
 from django import template
 
 import ttag
+from ttag.core import BaseTag, DeclarativeArgsMetaclass 
 from ttag.tests.setup import models
 
 register = template.Library()
 
 
-class NamedArg(ttag.Tag):
+class SelfRegisteringMetaclass(DeclarativeArgsMetaclass):
+
+    def __new__(cls, name, bases, attrs):
+        cls = DeclarativeArgsMetaclass.__new__(cls, name, bases, attrs)
+        parents = [b for b in bases if isinstance(b, DeclarativeArgsMetaclass)]
+        if parents:
+            register.tag(cls._meta.name, cls)
+        return cls
+
+
+class TestTag(BaseTag):
+    __metaclass__ = SelfRegisteringMetaclass
+
+
+class NamedArg(TestTag):
     limit = ttag.IntegerArg(default=5)
 
     def output(self, data):
@@ -19,20 +34,20 @@ class NamedKeywordArg(NamedArg):
     limit = ttag.IntegerArg(keyword=True)
 
 
-class NoArgument(ttag.Tag):
+class NoArgument(TestTag):
 
     def output(self, data):
         return 'No arguments here'
 
 
-class Positional(ttag.Tag):
+class Positional(TestTag):
     limit = ttag.IntegerArg(default=5, positional=True)
 
     def output(self, data):
         return '%s' % data['limit']
 
 
-class PositionalMixed(ttag.Tag):
+class PositionalMixed(TestTag):
     limit = ttag.IntegerArg(default=5, positional=True)
     as_ = ttag.BasicArg()
 
@@ -42,7 +57,7 @@ class PositionalMixed(ttag.Tag):
         return ''
 
 
-class PositionalOptional(ttag.Tag):
+class PositionalOptional(TestTag):
     start = ttag.IntegerArg(positional=True)
     finish = ttag.IntegerArg(positional=True, required=False)
 
@@ -54,7 +69,7 @@ class PositionalOptional(ttag.Tag):
         return ','.join([str(i) for i in range(start, finish)])
 
 
-class PositionalOptionalMixed(ttag.Tag):
+class PositionalOptionalMixed(TestTag):
     start = ttag.IntegerArg(positional=True)
     finish = ttag.IntegerArg(positional=True, required=False)
     step = ttag.IntegerArg()
@@ -67,7 +82,7 @@ class PositionalOptionalMixed(ttag.Tag):
         return ','.join([str(i) for i in range(start, finish, data['step'])])
 
 
-class ArgumentType(ttag.Tag):
+class ArgumentType(TestTag):
     age = ttag.IntegerArg(required=False)
     name_ = ttag.StringArg(required=False)
     url = ttag.ModelInstanceArg(model=models.Link, required=False)
@@ -84,7 +99,7 @@ class ArgumentType(ttag.Tag):
         return u' '.join(values)
 
 
-class Constant(ttag.Tag):
+class Constant(TestTag):
     start = ttag.Arg(positional=True)
     to = ttag.ConstantArg()
     finish = ttag.Arg(positional=True)
@@ -93,7 +108,7 @@ class Constant(ttag.Tag):
         return '%s - %s' % (data['start'], data['finish'])
 
 
-class BaseInclude(ttag.Tag):
+class BaseInclude(TestTag):
     """
     A tag for testing KeywordsArg.
     """

@@ -22,9 +22,9 @@ class TagExecutionTests(TestCase):
         """
         self.assertEqual(render('{% named_arg %}'),
                          'The limit is %d' %
-                         tags.NamedArg._args['limit'].default)
+                         tags.NamedArg._meta.args['limit'].default)
 
-        tags.NamedArg._args['limit'].default = None
+        tags.NamedArg._meta.args['limit'].default = None
 
         self.assertRaises(template.TemplateSyntaxError, render, '{% named_arg %}')
 
