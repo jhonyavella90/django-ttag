@@ -1,21 +1,12 @@
-==============
-TTag reference
-==============
+=====
+Usage
+=====
 
 
-Overview
-========
+``Tag`` and the various ``Arg`` classes are consciously modelled after
+Django's ``Model``, ``Form``, and respective ``Field`` classes.
 
-TTag replaces the normal method of creating custom template tags.  It
-uses a custom template ``Node`` subclass called ``Tag`` which handles all of
-the relevant aspects of a tag: defining and parsing arguments, handling
-validation, resolving variables from the context, and rendering output.  It
-tries to make the most common cases extremely simple, while making even complex
-cases easier than they would be otherwise.
-
-``TemplateTag`` and the various ``Arg`` classes are consciously modelled after
-Django's ``Model``, ``Form``, and respective ``Field`` classes.  ``Arg``s are
-set on a ``TemplateTag`` in the same way ``Field``s would be set on a
+``Arg``s are set on a ``Tag`` in the same way ``Field``s would be set on a
 ``Model`` or ``Form``.
 
 
@@ -123,14 +114,20 @@ Validation arguments
 Some default classes are included to assist with validation of template
 arguments.
 
-TODO: define arguments and show an example 
+.. todo::
+
+   define arguments and show an example 
 
 
 Altering context
 ================
 
-TODO: explain that output() is a shortcut and that render() can be used
-(with resolve())
+.. todo::
+
+   explain that output() is a ust shortcut and that render() can be used
+   (with resolve()).
+   
+   Perhaps use the common 'as var' as the example.
 
 
 Writing a block tag
@@ -184,3 +181,49 @@ More advanced cases can be handled using Django's standard parser in the
 		def __init__(self, parser, token):
 			super(Repeat, self).__init__(parser, token)
 			# Do whatever fancy parser modification you like.
+
+
+Full Example
+============
+
+This example provides a template tag which outputs a tweaked version of the
+instance name passed in.  It demonstrates using the various ``Arg`` types::
+
+    class TweakName(ttag.Tag):
+        """
+        Provides the tweak_name template tag, which outputs a
+        slightly modified version of the NamedModel instance passed in.
+
+        {% tweak_name instance [offset=0] [limit=10] [reverse] %}
+        """
+		instance = ttag.ModelInstanceArg(positional=True, model=NamedModel))
+        offset = ttag.IntegerArg(default=0, keyword=True)
+        limit = ttag.IntegerArg(default=10, keyword=True)
+        reverse = ttag.BooleanArg()
+
+        def output(self, data):
+            name = data['instance'].name
+
+            # reverse if appropriate
+            if 'reverse' in data:
+                name = name[::-1]
+
+            # check that limit is not < 0
+            if data['limit'] < 0:
+                raise ttag.TagValidationError("limit must be >= 0")
+
+            # apply our offset and limit
+            name = name[data['offset']:data['limit']]
+
+            # return the tweaked name
+            return name
+
+Example usages::
+
+    {% tweak_name obj limit=5 %}
+
+    {% tweak_name obj offset=1 %}
+
+    {% tweak_name obj reverse %}
+
+    {% tweak_name obj offset=1 limit=5 reverse %}

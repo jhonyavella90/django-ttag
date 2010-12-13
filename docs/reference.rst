@@ -1,6 +1,6 @@
-==============
-TTag reference
-==============
+=========
+Reference
+=========
 
 
 Overview
@@ -351,49 +351,3 @@ mode it is optional, and in compact mode it is obviously not used.
 
 Use the ``compile_values`` parameter to compile keyword values as template
 variables (defaults to ``True``).
-
-
-Full Example
-============
-
-This example provides a template tag which outputs a tweaked version of the
-instance name passed in.  It demonstrates using the various ``Arg`` types::
-
-    class TweakName(ttag.Tag):
-        """
-        Provides the tweak_name template tag, which outputs a
-        slightly modified version of the NamedModel instance passed in.
-
-        {% tweak_name instance [offset=0] [limit=10] [reverse] %}
-        """
-		instance = ttag.ModelInstanceArg(positional=True, model=NamedModel))
-        offset = ttag.IntegerArg(default=0, keyword=True)
-        limit = ttag.IntegerArg(default=10, keyword=True)
-        reverse = ttag.BooleanArg()
-
-        def output(self, data):
-            name = data['instance'].name
-
-            # reverse if appropriate
-            if 'reverse' in data:
-                name = name[::-1]
-
-            # check that limit is not < 0
-            if data['limit'] < 0:
-                raise ttag.TagValidationError("limit must be >= 0")
-
-            # apply our offset and limit
-            name = name[data['offset']:data['limit']]
-
-            # return the tweaked name
-            return name
-
-Example usages::
-
-    {% tweak_name obj limit=5 %}
-
-    {% tweak_name obj offset=1 %}
-
-    {% tweak_name obj reverse %}
-
-    {% tweak_name obj offset=1 limit=5 reverse %}

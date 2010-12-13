@@ -14,6 +14,7 @@ application.
 
 .. toctree::
    :maxdepth: 2
-   :glob:
 
-   *
+   install
+   usage
+   reference
