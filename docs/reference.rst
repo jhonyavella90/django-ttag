@@ -34,24 +34,28 @@ A ``Tag`` can take options via a ``Meta`` inner class::
         class Meta:
             name = "hi"
 
-.. attribute:: ttag.Tag.Meta.name
+.. attribute:: ~ttag.Tag.Meta.name
 
     Explicitly choose a name for the tag. If not given, the tag's name will be
 	created by taking the class's name and converting it from CamelCase to
 	under_score format. For example, ``AmazingStuff`` would turn into
 	``{% amazing_stuff %}``.
 
-.. attribute:: ttag.Tag.Meta.register
+.. attribute:: ~ttag.Tag.Meta.register
 
     Register the tag in a tag library.
     
     Alternatively, a tag can still be rendered the standard way:
     ``some_library.tag(ThisTag)``.
 
-.. attribute:: ttag.Tag.Meta.block
+.. attribute:: ~ttag.Tag.Meta.block
 
     Retrieve subsequent template nodes until ``{% end[tagname] %}``, adding
     them to ``self.nodelists``.
+
+.. attribute:: ~ttag.Tag.Meta.end_block
+
+    An alternative ending block node. Defaults to ``'end%(name)s'``.
 
 output
 ------

@@ -111,8 +111,25 @@ class BaseTag(template.Node):
         self._process_positional_args(parser, tokens)
         self._process_named_args(parser, tokens)
         if self._meta.block:
-            self.nodelist = parser.parse(('end%s' % (self._meta.name,),))
-            parser.delete_first_token()
+            nodelists = {}
+            block_names = [self._meta.end_block]
+            other_blocks = isinstance(self._meta.block, dict) and \
+                                                self._meta.block or {}
+            block_names.extend(other_blocks)
+            current = ''
+            while True:
+                nodelists['nodelist%s' % current] = parser.parse(block_names)
+                current = parser.next_token().contents
+                parser.delete_first_token()
+                if current == self.end_block:
+                    break
+            for name, required in other_blocks:
+                if required and name not in nodelists:
+                    raise template.TemplateSyntaxError('Expected {%% %s %%}' %
+                                                       name)
+            self.child_nodelists = list(nodelists)
+            for attr, nodelist in nodelists:
+                setattr(self, attr, nodelist)
 
     def _process_positional_args(self, parser, tokens):
         valid_arg_names = self._meta.named_args.keys()
