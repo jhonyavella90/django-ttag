@@ -159,7 +159,7 @@ For simple block tags, use the :attr:`~ttag.Tag.Meta.block` option::
         def render(self, context):
             data = self.resolve(context)
             output = []
-            for i in data['count']:
+            for i in range(data['count']):
                 context.push()
                 output.append(self.nodelist.render(context))
                 context.pop()
@@ -194,7 +194,7 @@ section is required::
             if not data['count']:
                 return self.nodelist_empty.render(context)
             output = []
-            for i in data['count']:
+            for i in range(data['count']):
                 context.push()
                 output.append(self.nodelist.render(context))
                 context.pop()
