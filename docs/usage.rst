@@ -41,7 +41,7 @@ TTag ``Tag`` classes are registered just like a standard tag::
             return "Hi there!"
 
 
-	register.tag(Welcome)
+    register.tag(Welcome)
 
 
 Tag name
@@ -68,7 +68,7 @@ Let's extend the basic example tag above to accept an argument so we can greet
 the user personally::
 
     class Welcome(ttag.Tag):
-    	user = ttag.Arg(positional=True)
+        user = ttag.Arg(positional=True)
 
         def output(self, data):
             name = data['user'].get_full_name()
@@ -101,7 +101,7 @@ argument format (``name=value``)::
 
 This would result in a tag like this::
 
-	{% output limit=some_limit|default:1 offset=profile.offset %}
+    {% output limit=some_limit|default:1 offset=profile.offset %}
 
 .. note::
 
@@ -116,7 +116,7 @@ arguments.
 
 .. todo::
 
-   define arguments and show an example 
+   define arguments and show an example
 
 
 Altering context
@@ -126,8 +126,22 @@ Altering context
 
    explain that output() is a ust shortcut and that render() can be used
    (with resolve()).
-   
+
    Perhaps use the common 'as var' as the example.
+
+
+Cleaning arguments
+==================
+
+.. todo::
+
+   You can validate / clean arguments similar to Forms.
+
+   ``clean_[argname](value)`` (must return the cleaned value)
+
+   ``clean(data)`` (must returned the cleaned data dictionary)
+
+   Use the ``ttag.TagValidationError`` exception to raise validation errors.
 
 
 Writing a block tag
@@ -137,7 +151,7 @@ For simple block tags, use the :attr:`~ttag.Tag.Meta.block` option::
 
     class Repeat(ttag.Tag):
         count = ttag.IntegerArg()
-        
+
         class Meta():
             block = True
             end_block = 'done'
@@ -146,10 +160,10 @@ For simple block tags, use the :attr:`~ttag.Tag.Meta.block` option::
             data = self.resolve(context)
             output = []
             for i in data['count']:
-	            context.push()
-	            output.append(self.nodelist.render(context))
-		        context.pop()
-	        return ''.join(output)
+                context.push()
+                output.append(self.nodelist.render(context))
+                context.pop()
+            return ''.join(output)
 
 As you can see, using the block option will add a ``nodelist`` attribute to the
 tag, which can then be rendered using the context.
@@ -162,25 +176,46 @@ above tag if the option hadn't been provided.
 Working with multiple blocks
 ----------------------------
 
-Say we wanted to expand on our repeat tag to look for an {% empty %}
-alternative section for when a zero-value count is received. 
+Say we wanted to expand on our repeat tag to look for an ``{% empty %}``
+alternative section for when a zero-value count is received.
 
-    class Meta():
-        block = {'empty': False}
-        end_block = 'end%(name)s'
-
-Rather than setting the ``block`` option to True, we set it to a dictionary
+Rather than setting the ``block`` option to ``True``, we set it to a dictionary
 where the keys are the section tags to look for and the values are whether the
-section is required. 
+section is required::
+
+    class Repeat(ttag.Tag):
+        count = ttag.IntegerArg()
+
+        class Meta():
+            block = {'empty': False}
+
+        def render(self, context):
+            data = self.resolve(context)
+            if not data['count']:
+                return self.nodelist_empty.render(context)
+            output = []
+            for i in data['count']:
+                context.push()
+                output.append(self.nodelist.render(context))
+                context.pop()
+            return ''.join(output)
+
+This will cause two attributes to be added to the tag: ``nodelist`` will
+contain everything collected up to the ``{% empty %}`` section tag, and
+``nodelist_empty`` will contain everything up until the end tag.
+
+If no matching section tag is found when parsing the template,
+either a ``TemplateSyntaxError`` will be raised (if it's a required section)
+or an empty node list will be used.
 
 More advanced cases can be handled using Django's standard parser in the
-``__init__`` method of your tag:
+``__init__`` method of your tag::
 
     class AdvancedTag(ttags.Tag):
 
-		def __init__(self, parser, token):
-			super(Repeat, self).__init__(parser, token)
-			# Do whatever fancy parser modification you like.
+        def __init__(self, parser, token):
+            super(Repeat, self).__init__(parser, token)
+            # Do whatever fancy parser modification you like.
 
 
 Full Example
@@ -196,26 +231,30 @@ instance name passed in.  It demonstrates using the various ``Arg`` types::
 
         {% tweak_name instance [offset=0] [limit=10] [reverse] %}
         """
-		instance = ttag.ModelInstanceArg(positional=True, model=NamedModel))
+        instance = ttag.ModelInstanceArg(positional=True, model=NamedModel))
         offset = ttag.IntegerArg(default=0, keyword=True)
         limit = ttag.IntegerArg(default=10, keyword=True)
         reverse = ttag.BooleanArg()
 
+		def clean_limit(self, value):
+            """
+            Check that limit is not negative.
+            """
+            if value < 0:
+                raise ttag.TagValidationError("limit must be >= 0")
+            return value
+
         def output(self, data):
             name = data['instance'].name
 
-            # reverse if appropriate
+            # Reverse if appropriate.
             if 'reverse' in data:
                 name = name[::-1]
 
-            # check that limit is not < 0
-            if data['limit'] < 0:
-                raise ttag.TagValidationError("limit must be >= 0")
+            # Apply our offset and limit.
+            name = name[data['offset']:data['offset'] + data['limit']]
 
-            # apply our offset and limit
-            name = name[data['offset']:data['limit']]
-
-            # return the tweaked name
+            # Return the tweaked name.
             return name
 
 Example usages::

@@ -118,15 +118,19 @@ class BaseTag(template.Node):
             block_names.extend(other_blocks)
             current = ''
             while True:
-                nodelists['nodelist%s' % current] = parser.parse(block_names)
+                attr = 'nodelist%s' % (current and '_%s' % current or '')
+                nodelists[attr] = parser.parse(block_names)
                 current = parser.next_token().contents
                 parser.delete_first_token()
                 if current == self.end_block:
                     break
             for name, required in other_blocks:
-                if required and name not in nodelists:
+                if name in nodelists:
+                    continue
+                if required:
                     raise template.TemplateSyntaxError('Expected {%% %s %%}' %
                                                        name)
+                nodelists[name] = template.NodeList()
             self.child_nodelists = list(nodelists)
             for attr, nodelist in nodelists:
                 setattr(self, attr, nodelist)
@@ -240,7 +244,7 @@ class BaseTag(template.Node):
 
 
 class Tag(BaseTag):
-    # This is a separate class from BaseForm in order to abstract the way
+    # This is a separate class from BaseTag in order to abstract the way
     # arguments are specified. This class (Tag) is the one that does the
     # fancy metaclass stuff purely for the semantic sugar -- it allows one
     # to define a tag using declarative syntax.
