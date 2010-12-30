@@ -12,6 +12,7 @@
 # serve to show the default.
 
 import sys, os
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from ttag import get_version
 
 # If extensions (or modules to document with autodoc) are in another directory,

@@ -1,6 +1,6 @@
-====
-TTag
-====
+===========
+django-ttag
+===========
 
 TTag is a template tag constructor library for Django created for the purpose
 of making writing template tags easier.
@@ -23,4 +23,4 @@ This would produce a tag named ``welcome`` which can be used like this::
     {% welcome current_user fallback "Hello, anonymous." %} 
 
 More comprehensive usage and reference documentation can be found in the
-``docs`` directory.
+``docs`` directory, or at http://packages.python.org/django-ttag/.
