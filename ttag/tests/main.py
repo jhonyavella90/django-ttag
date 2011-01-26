@@ -210,7 +210,7 @@ class KeywordsArgTest(TestCase):
                          'including file.html')
         self.assertEqual(render('{% include_mixed "file.html" %}'),
                          'including file.html')
-    
+
     def test_compact(self):
         self.assertEqual(
             render('{% include_compact' + self.compact_kwargs, {'x': 1}),
@@ -230,13 +230,13 @@ class KeywordsArgTest(TestCase):
             template.TemplateSyntaxError, render,
             '{% include_compact' + self.mixed_kwargs
         )
-    
+
     def test_verbose(self):
         self.assertEqual(
             render('{% include_verbose' + self.verbose_kwargs, {'x': 1}),
             'including file.html with bar = 2 and foo = 1'
         )
-    
+
     def test_verbose_invalid(self):
         self.assertRaises(
             template.TemplateSyntaxError, render,
@@ -246,13 +246,13 @@ class KeywordsArgTest(TestCase):
             template.TemplateSyntaxError, render,
             '{% include_verbose' + self.mixed_kwargs
         )
-    
+
     def test_mixed(self):
         self.assertEqual(
             render('{% include_mixed' + self.mixed_kwargs, {'x': 1}),
             'including file.html with bar = 2 and baz = 3 and foo = 1'
         )
-    
+
     def test_duplicate_key(self):
         self.assertRaises(
             template.TemplateSyntaxError, render,
@@ -266,3 +266,8 @@ class KeywordsArgTest(TestCase):
             template.TemplateSyntaxError, render,
             '{% include_mixed "file.html" with foo=1 2 as foo %}'
         )
+
+    def test_loop(self):
+        self.assertEqual(render('|{% for i in "abc" %}{% keywords_echo '
+                                'test=forloop.counter %}|{% endfor %}'),
+                         '|test: 1|test: 2|test: 3|')

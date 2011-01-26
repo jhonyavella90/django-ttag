@@ -407,7 +407,8 @@ class KeywordsArg(Arg):
         Resolve the keyword argument values for this argument for the given
         ``context``.
         """
+        keywords = {}
         for key, val in value.items():
-            value[key] = super(KeywordsArg, self).resolve(val, context, *args,
-                                                          **kwargs)
-        return value
+            keywords[key] = super(KeywordsArg, self).resolve(val, context,
+                                                             *args, **kwargs)
+        return keywords

@@ -1,7 +1,7 @@
 from django import template
 
 import ttag
-from ttag.core import BaseTag, DeclarativeArgsMetaclass 
+from ttag.core import BaseTag, DeclarativeArgsMetaclass
 from ttag.tests.setup import models
 
 register = template.Library()
@@ -106,6 +106,14 @@ class Constant(TestTag):
 
     def output(self, data):
         return '%s - %s' % (data['start'], data['finish'])
+
+
+class KeywordsEcho(TestTag):
+    keywords = ttag.KeywordsArg(positional=True)
+
+    def output(self, data):
+        keywords = data['keywords'].items()
+        return ', '.join('%s: %s' % (key, value) for key, value in keywords)
 
 
 class BaseInclude(TestTag):
