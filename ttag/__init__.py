@@ -1,10 +1,15 @@
-from ttag.args import Arg, BasicArg, BooleanArg, ConstantArg, DateArg, \
-    DateTimeArg, IntegerArg, IsInstanceArg, KeywordsArg, ModelInstanceArg, \
-    StringArg, TimeArg
-from ttag.core import Tag
-from ttag.exceptions import TagArgumentMissing, TagValidationError
+try:
+    from ttag.args import Arg, BasicArg, BooleanArg, ConstantArg, DateArg, \
+        DateTimeArg, IntegerArg, IsInstanceArg, KeywordsArg, \
+        ModelInstanceArg, StringArg, TimeArg
+    from ttag.core import Tag
+    from ttag.exceptions import TagArgumentMissing, TagValidationError
+except ImportError:
+    # This allows setup.py to skip import errors which may occur if ttag is
+    # being installed at the same time as Django.
+    pass
 
-VERSION = (1, 0, 'alpha')
+VERSION = (1, 0, 'alpha', 2)
 
 
 def get_version(number_only=False):
