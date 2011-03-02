@@ -50,6 +50,10 @@ class DeclarativeArgsMetaclass(type):
         if not opts.name:
             opts.name = utils.get_default_name(name)
 
+        # Set the class name to the name defined, ensuring the defined name
+        # will be used when registering the tag with a Django tag library.
+        name = opts.name
+
         all_args = [(arg_name.rstrip('_'), attrs.pop(arg_name))
                     for arg_name, obj in attrs.items() if isinstance(obj, Arg)]
         all_args.sort(key=lambda x: x[1].creation_counter)
