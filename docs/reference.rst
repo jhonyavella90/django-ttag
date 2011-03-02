@@ -27,6 +27,8 @@ Tag
 Meta options
 ------------
 
+.. class:: ttag.Tag.Meta
+
 A ``Tag`` can take options via a ``Meta`` inner class::
 
     class Welcome(ttag.Tag):
@@ -34,26 +36,26 @@ A ``Tag`` can take options via a ``Meta`` inner class::
         class Meta:
             name = "hi"
 
-.. attribute:: ~ttag.Tag.Meta.name
+.. attribute:: ttag.Tag.Meta.name
 
     Explicitly choose a name for the tag. If not given, the tag's name will be
 	created by taking the class's name and converting it from CamelCase to
 	under_score format. For example, ``AmazingStuff`` would turn into
 	``{% amazing_stuff %}``.
 
-.. attribute:: ~ttag.Tag.Meta.register
+.. attribute:: ttag.Tag.Meta.register
 
     Register the tag in a tag library.
     
     Alternatively, a tag can still be rendered the standard way:
     ``some_library.tag(ThisTag)``.
 
-.. attribute:: ~ttag.Tag.Meta.block
+.. attribute:: ttag.Tag.Meta.block
 
     Retrieve subsequent template nodes until ``{% end[tagname] %}``, adding
     them to ``self.nodelists``.
 
-.. attribute:: ~ttag.Tag.Meta.end_block
+.. attribute:: ttag.Tag.Meta.end_block
 
     An alternative ending block node. Defaults to ``'end%(name)s'``.
 
@@ -63,7 +65,7 @@ output
 If your tag does not modify the output, override this method to change the
 output of this tag. 
 
-.. method:: .output(self, data)
+.. method:: ttag.Tag.output(self, data)
 
     :param data: A dictionary of data built from the arguments this tag uses,
     	usually built by the :meth:`resolve` method.
@@ -75,7 +77,7 @@ As an alternative to overriding the ``output`` method, a ``TemplateTag``
 subclass may directly override the ``render`` method. This is useful for
 when you want to alter the context.
 
-.. method:: .render(self, context)
+.. method:: ttag.Tag.render(self, context)
 
 	:param context: The current template context.
 
@@ -85,9 +87,9 @@ when you want to alter the context.
     context), ``render`` should simply return an empty string.
 
 To retrieve the values of the tag's arguments, if any, use the following method
-inside ``render``::
+inside ``render``:
 
-.. method:: .resolve(self, context)
+.. method:: ttag.Tag.resolve(self, context)
 
 	Retrieve the values of the tag's arguments.
 	
