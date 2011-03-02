@@ -15,7 +15,9 @@ validation, resolving variables from the context, and rendering output.
 Tag
 ===
 
-.. class:: ttag.Tag
+.. currentmodule:: ttag
+
+.. class:: Tag
 
     A representation of a template tag. For example::
 
@@ -27,37 +29,37 @@ Tag
 Meta options
 ------------
 
-.. class:: ttag.Tag.Meta
+.. class:: Tag.Meta
 
-A ``Tag`` can take options via a ``Meta`` inner class::
+    A ``Tag`` takes options via a ``Meta`` inner class::
 
-    class Welcome(ttag.Tag):
+        class Welcome(ttag.Tag):
 
-        class Meta:
-            name = "hi"
+            class Meta:
+                name = "hi"
 
-.. attribute:: ttag.Tag.Meta.name
+    .. attribute:: name
 
-    Explicitly choose a name for the tag. If not given, the tag's name will be
-	created by taking the class's name and converting it from CamelCase to
-	under_score format. For example, ``AmazingStuff`` would turn into
-	``{% amazing_stuff %}``.
+        Explicitly choose a name for the tag. If not given, the tag's name will be
+    	created by taking the class's name and converting it from CamelCase to
+    	under_score format. For example, ``AmazingStuff`` would turn into
+    	``{% amazing_stuff %}``.
 
-.. attribute:: ttag.Tag.Meta.register
+    .. attribute:: register
 
-    Register the tag in a tag library.
-    
-    Alternatively, a tag can still be rendered the standard way:
-    ``some_library.tag(ThisTag)``.
+        Register the tag in a tag library.
 
-.. attribute:: ttag.Tag.Meta.block
+        Alternatively, a tag can still be rendered the standard way:
+        ``some_library.tag(ThisTag)``.
 
-    Retrieve subsequent template nodes until ``{% end[tagname] %}``, adding
-    them to ``self.nodelists``.
+    .. attribute:: block
 
-.. attribute:: ttag.Tag.Meta.end_block
+        Retrieve subsequent template nodes until ``{% end[tagname] %}``, adding
+        them to ``self.nodelists``.
 
-    An alternative ending block node. Defaults to ``'end%(name)s'``.
+    .. attribute:: end_block
+
+        An alternative ending block node. Defaults to ``'end%(name)s'``.
 
 output
 ------
@@ -65,7 +67,7 @@ output
 If your tag does not modify the output, override this method to change the
 output of this tag. 
 
-.. method:: ttag.Tag.output(self, data)
+.. method:: Tag.output(data)
 
     :param data: A dictionary of data built from the arguments this tag uses,
     	usually built by the :meth:`resolve` method.
@@ -77,9 +79,9 @@ As an alternative to overriding the ``output`` method, a ``TemplateTag``
 subclass may directly override the ``render`` method. This is useful for
 when you want to alter the context.
 
-.. method:: ttag.Tag.render(self, context)
+.. method:: Tag.render(context)
 
-	:param context: The current template context.
+    :param context: The current template context.
 
     ``render`` must return a unicode string.
 
@@ -89,7 +91,7 @@ when you want to alter the context.
 To retrieve the values of the tag's arguments, if any, use the following method
 inside ``render``:
 
-.. method:: ttag.Tag.resolve(self, context)
+.. method:: Tag.resolve(context)
 
 	Retrieve the values of the tag's arguments.
 	
@@ -110,7 +112,7 @@ argument in the tag below::
     class SetTag(ttag.Tag):
         value = ttag.Arg(positional=True)
         as_ = ttag.BasicArg()
-        
+
         def render(self, context):
             data = self.resolve(context)
             as_var = data['as']
@@ -180,180 +182,175 @@ value added to the data dictionary if an argument is not provided::
 Argument Types
 ==============
 
-Arg and its subclasses provide various other levels of parsing and validation.
+``Arg`` and its subclasses provide various other levels of parsing and
+validation.
 
 
 Arg
 ---
 
-This is the base class for all other argument types.  Behavior can be defined
-via the following constructor arguments.
+.. class:: Arg(required=True, default=None, null=False, positional=False, keyword=False)
 
+    A standard argument in a :class:`Tag`. Used as a base class for all other
+    argument classes.
 
-required
-~~~~~~~~
+    :param required:
+        Whether the argument is required as part of the tag definition in the
+        template. Required positional arguments can not occur after optional
+        ones. 
 
-Whether the argument is required as part of the tag definition in the template.
-Required positional arguments can not occur after optional ones. 
+        Defaults to ``True``.
 
-Defaults to ``True``.
+    :param default:
+        The default value for this argument if it is not specified.
 
-default
-~~~~~~~
+        If ``None`` and the field is required, an exception will be raised when
+        the template is parsed.
 
-The default value for this argument if it is not specified.
+        Defaults to ``None``.
 
-If ``None`` and the field is required, an exception will be raised when the
-template is parsed.
+    :param null:
+        Determines whether a value of ``None`` is an acceptable value for the
+        argument resolution.
 
-Defaults to ``None``.
+        When set to ``False``, a value of ``None`` or a missing context
+        variable will cause a ``TemplateTagValidationError`` when this argument
+        is cleaned.
 
-null
-~~~~
+        Defaults to ``False``.
 
-Determines whether a value of ``None`` is an acceptable value for the argument
-resolution.
+    :param positional:
+        Whether this is a positional tag (i.e. the argument name is not part of
+        the tag definition).  
 
-When set to ``False``, a value of ``None`` or a missing context variable will
-cause a ``TemplateTagValidationError`` when this argument is cleaned.
+        Defaults to ``False``.
 
-Defaults to ``False``.
+    :param keyword:
+        Use an equals to separate the value from the argument name, rather than
+        the standard space separation.
 
-positional
-~~~~~~~~~~
+        This parameter is only used for named arguments (i.e.
+        ``positional=False``).
 
-Whether this is a positional tag (i.e. the argument name is not part of the tag
-definition).  
+        Defaults to ``False``.
 
-Defaults to ``False``.
 
-keyword
-~~~~~~~
+Validation Arguments
+--------------------
 
-Use an equals to separate the value from the argument name, rather than the
-standard space separation.
+.. class:: IntegerArg
 
-This parameter is only used for named arguments (i.e. ``positional=False``).
+    Validates that the argument is an integer, otherwise throws a template
+    error.
 
-Defaults to ``False``.
 
+.. class:: StringArg
 
-BasicArg
---------
+    Validates that the argument is a ``string`` instance, otherwise throws a
+    template error.
 
-A simpler argument which doesn't compile its value as a ``FilterExpression``.
 
-Example usage::
+.. class:: BooleanArg
 
-    class GetUsers(ttag.Tag)
-        as_ = ttag.BasicArg()
+    A "flag" argument which doesn't consume any additional tokens.
 
-        def render(self, context)
-            data = self.resolve(data)
-            context[data['as']] = Users.objects.all()
-            return '' 
+    If it is not defined in the tag, the argument value will not exist in the
+    resolved data dictionary.
 
+    For example::
 
-IntegerArg
-----------
+        class CoolTag(ttag.Tag)
+            cool = ttag.BooleanArg()
 
-Validates that the argument is an integer, otherwise throws a template error.
+            def output(self, data):
+                if 'cool' in data:
+                    return "That's cool!"
+                else:
+                    return "Uncool."
 
 
-StringArg
----------
+.. class:: IsInstanceArg(..., cls, cls_name)
 
-Validates that the argument is a ``string`` instance, otherwise throws a
-template error.
+    Validates that the argument is an instance of the provided class (``cls``),
+    otherwise throws a a template error, using the ``cls_name`` in the error
+    message.
 
+    For example::
 
-BooleanArg
-----------
+    	date = IsInstanceArg(cls=datetime.date, cls_name=_('Date'))
 
-A "flag" argument which doesn't consume any additional tokens.
 
-If it is not defined in the tag, the argument value will not exist in the
-resolved data dictionary.
+.. class:: DateTimeArg
 
-For example::
+    Validates that the argument is a ``datetime`` instance, otherwise throws a
+    template error.
 
-    class CoolTag(ttag.Tag)
-        cool = ttag.BooleanArg()
 
-        def output(self, data):
-            if 'cool' in data:
-                return "That's cool!"
-            else:
-                return "Uncool."
+.. class:: DateArg
 
+    Validates that the argument is a ``date`` instance, otherwise throws a
+    template error.
 
-IsInstanceArg
--------------
 
-Validates that the argument is an instance of the provided class (``cls``),
-otherwise throws a a template error, using the ``cls_name`` in the error
-message.
+.. class:: TimeArg
 
-	date = IsInstanceArg(cls=datetime.date, cls_name=_('Date'))
+    Validates that the argument is a ``time`` instance, otherwise throws a
+    template error.
 
 
-DateTimeArg
------------
+.. class:: ModelInstanceArg(..., model)
 
-Validates that the argument is a ``datetime`` instance, otherwise throws a
-template error.
+    Validates that the passed in value is an instance of the specified
+    ``Model`` class.  It requires a single additional named argument.
 
+    :param model:
+        The ``Model`` class you want to validate against.
 
-DateArg
--------
 
-Validates that the argument is a ``date`` instance, otherwise throws a template
-error.
+Other Arguments
+---------------
 
+.. class:: BasicArg
 
-TimeArg
--------
+    A simpler argument which doesn't compile its value as a
+    ``FilterExpression``.
 
-Validates that the argument is a ``time`` instance, otherwise throws a template
-error.
+    Example usage::
 
+        class GetUsers(ttag.Tag)
+            as_ = ttag.BasicArg()
 
-ModelInstanceArg
-----------------
+            def render(self, context)
+                data = self.resolve(data)
+                context[data['as']] = Users.objects.all()
+                return '' 
 
-Validates that the passed in value is an instance of the specified ``Model``
-class.  It takes a single additional named argument, ``model``.
 
-model
-~~~~~
+.. class:: KeywordsArg(..., compact=True, verbose=False, compile_values=True)
 
-The ``Model`` class you want to validate against.
+    Parses one or more additional tokens as keywords.
 
+    :param compact:
+        Use compact format. For example::
 
-KeywordsArg
------------
+            {% compact with foo=1 bar=2 %}
 
-Parses one or more additional tokens as keywords.
+    :param verbose:
+        Use verbose format::
 
-Use ``compact`` and ``verbose`` boolean parameters to control the keyword
-argument format. The default format is compact::
+        	{% verbose with 1 as foo and 2 as bar %}
 
-    {% compact with foo=1 bar=2 %}
+        In verbose mode, the ``and`` is required for multiple arguments unless
+        ``compact`` is also set to ``True`` (in which case the ``and`` is
+        optional).
 
-Setting ``verbose=True`` and ``compact=False`` will require verbose format:
+    :param compile_values:
+        Compile keyword values as template variables (defaults to ``True``).
 
-	{% verbose with 1 as foo and 2 as bar %}
+    If ``verbose`` and ``compact`` are set to ``True``, then either (or
+    even both) formats are allowed. This is usually only used for backwards
+    compatibility::
 
-If ``verbose=True`` and ``compact`` is left as ``True``, then either (or even
-both) formats are allowed. This is usually only used for backwards
-compatibility::
-
-    {% mixed with foo=1 bar=2 %}
-    {% mixed with 1 as foo and 2 as bar %}
-    {% mixed with foo=1 and 2 as bar %}
-
-In verbose mode, the ``and`` is required for multiple arguments, in mixed
-mode it is optional, and in compact mode it is obviously not used.
-
-Use the ``compile_values`` parameter to compile keyword values as template
-variables (defaults to ``True``).
+        {% mixed with foo=1 bar=2 %}
+        {% mixed with 1 as foo and 2 as bar %}
+        {% mixed with foo=1 and 2 as bar %}
