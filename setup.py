@@ -13,7 +13,8 @@ setup(
     packages=[
         'ttag',
         'ttag.tests',
-        'ttag.tests.setup'
+        'ttag.tests.setup',
+        'ttag.helpers',
     ],
     classifiers=[
         'Development Status :: 3 - Alpha',
