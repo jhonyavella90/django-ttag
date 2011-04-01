@@ -113,7 +113,7 @@ class Arg(object):
         """
         keyword_token = token.find('=')
         if keyword_token != -1:
-            token = token[keyword_token + 1]
+            token = token[:keyword_token + 1]
         return token in valid_named_args
 
     def compile_filter(self, parser, value):

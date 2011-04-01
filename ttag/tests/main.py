@@ -83,6 +83,15 @@ class PositionalTest(TestCase):
         self.assertEqual(render('{% positional_mixed var as a%}x{{ a }}',
                                 {'var': '2'}), 'x2')
 
+    def test_positional_mixedkw(self):
+        """
+        Test that positional arguments work, mixed with keyword arguments.
+        """
+        self.assertEqual(render('{% positional_mixedkw 1 default=9 %}'), '1')
+        self.assertEqual(render('{% positional_mixedkw var default=9 %}',
+                                {'var': None}), '9')
+        self.assertEqual(render('{% positional_mixedkw default=9 %}'), '9')
+
     def test_positional_optional(self):
         """
         Test that optional positional arguments work.

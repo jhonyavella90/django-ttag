@@ -57,6 +57,14 @@ class PositionalMixed(TestTag):
         return ''
 
 
+class PositionalMixedkw(TestTag):
+    value = ttag.Arg(positional=True, required=False, null=True)
+    default = ttag.Arg(keyword=True)
+
+    def output(self, data):
+        return unicode(data.get('value') or data['default'])
+
+
 class PositionalOptional(TestTag):
     start = ttag.IntegerArg(positional=True)
     finish = ttag.IntegerArg(positional=True, required=False)
