@@ -22,7 +22,7 @@ class TestTag(BaseTag):
 
 
 class NamedArg(TestTag):
-    limit = ttag.IntegerArg(default=5)
+    limit = ttag.IntegerArg(default=5, named=True)
 
     def output(self, data):
         if 'limit' in data:
@@ -41,15 +41,15 @@ class NoArgument(TestTag):
 
 
 class Positional(TestTag):
-    limit = ttag.IntegerArg(default=5, positional=True)
+    limit = ttag.IntegerArg(default=5)
 
     def output(self, data):
         return '%s' % data['limit']
 
 
 class PositionalMixed(TestTag):
-    limit = ttag.IntegerArg(default=5, positional=True)
-    as_ = ttag.BasicArg()
+    limit = ttag.IntegerArg(default=5)
+    as_ = ttag.BasicArg(named=True)
 
     def render(self, context):
         data = self.resolve(context)
@@ -58,7 +58,7 @@ class PositionalMixed(TestTag):
 
 
 class PositionalMixedkw(TestTag):
-    value = ttag.Arg(positional=True, required=False, null=True)
+    value = ttag.Arg(required=False, null=True)
     default = ttag.Arg(keyword=True)
 
     def output(self, data):
@@ -66,8 +66,8 @@ class PositionalMixedkw(TestTag):
 
 
 class PositionalOptional(TestTag):
-    start = ttag.IntegerArg(positional=True)
-    finish = ttag.IntegerArg(positional=True, required=False)
+    start = ttag.IntegerArg()
+    finish = ttag.IntegerArg(required=False)
 
     def output(self, data):
         if 'finish' in data:
@@ -78,9 +78,9 @@ class PositionalOptional(TestTag):
 
 
 class PositionalOptionalMixed(TestTag):
-    start = ttag.IntegerArg(positional=True)
-    finish = ttag.IntegerArg(positional=True, required=False)
-    step = ttag.IntegerArg()
+    start = ttag.IntegerArg()
+    finish = ttag.IntegerArg(required=False)
+    step = ttag.IntegerArg(named=True)
 
     def output(self, data):
         if 'finish' in data:
@@ -91,12 +91,12 @@ class PositionalOptionalMixed(TestTag):
 
 
 class ArgumentType(TestTag):
-    age = ttag.IntegerArg(required=False)
-    name_ = ttag.StringArg(required=False)
-    url = ttag.ModelInstanceArg(model=models.Link, required=False)
-    date = ttag.DateArg(required=False)
-    time = ttag.TimeArg(required=False)
-    datetime = ttag.DateTimeArg(required=False)
+    age = ttag.IntegerArg(required=False, named=True)
+    name_ = ttag.StringArg(required=False, named=True)
+    url = ttag.ModelInstanceArg(model=models.Link, required=False, named=True)
+    date = ttag.DateArg(required=False, named=True)
+    time = ttag.TimeArg(required=False, named=True)
+    datetime = ttag.DateTimeArg(required=False, named=True)
     flag = ttag.BooleanArg()
 
     def output(self, data):
@@ -108,16 +108,16 @@ class ArgumentType(TestTag):
 
 
 class Constant(TestTag):
-    start = ttag.Arg(positional=True)
+    start = ttag.Arg()
     to = ttag.ConstantArg()
-    finish = ttag.Arg(positional=True)
+    finish = ttag.Arg()
 
     def output(self, data):
         return '%s - %s' % (data['start'], data['finish'])
 
 
 class KeywordsEcho(TestTag):
-    keywords = ttag.KeywordsArg(positional=True)
+    keywords = ttag.KeywordsArg()
 
     def output(self, data):
         keywords = data['keywords'].items()
@@ -140,15 +140,16 @@ class BaseInclude(TestTag):
 
 
 class IncludeCompact(BaseInclude):
-    template = ttag.Arg(positional=True)
-    with_ = ttag.KeywordsArg(required=False)
+    template = ttag.Arg()
+    with_ = ttag.KeywordsArg(named=True, required=False)
 
 
 class IncludeVerbose(BaseInclude):
-    template = ttag.Arg(positional=True)
-    with_ = ttag.KeywordsArg(required=False, compact=False, verbose=True)
+    template = ttag.Arg()
+    with_ = ttag.KeywordsArg(named=True, required=False, compact=False,
+                             verbose=True)
 
 
 class IncludeMixed(BaseInclude):
-    template = ttag.Arg(positional=True)
-    with_ = ttag.KeywordsArg(required=False, verbose=True)
+    template = ttag.Arg()
+    with_ = ttag.KeywordsArg(named=True, required=False, verbose=True)

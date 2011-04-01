@@ -21,7 +21,7 @@ class MaybeAs(ttag.helpers.AsTag):
 
 
 class OutputAs(ttag.helpers.AsTag):
-    value = ttag.Arg(positional=True)
+    value = ttag.Arg()
 
     class Meta:
         as_required = False

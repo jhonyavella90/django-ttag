@@ -20,7 +20,7 @@ class AsTagOptions(core.Options):
                     self.as_name,
                 )
             )
-        arg = args.BasicArg(required=self.as_required)
+        arg = args.BasicArg(required=self.as_required, named=True)
         arg.name = self.as_name
         self.named_args[self.as_name] = arg
 

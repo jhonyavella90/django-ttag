@@ -14,8 +14,8 @@ class Arg(object):
     # Tracks each time an Arg instance is created. Used to retain order.
     creation_counter = 0
 
-    def __init__(self, required=True, default=None, null=False,
-                 positional=False, keyword=False):
+    def __init__(self, required=True, default=None, null=False, keyword=False,
+                 named=False):
         """
         :param required:
             Whether the argument is required as part of the tag definition in
@@ -39,30 +39,38 @@ class Arg(object):
 
             Defaults to ``False``.
 
-        :param positional:
-            Whether this is a positional tag (i.e. the argument name is not
-            part of the tag definition).
-
-            Defaults to ``False``.
-
         :param keyword:
-            Use an equals to separate the value from the argument name, rather
-            than the standard space separation.
-
-            This parameter is only used for named arguments (i.e.
-            ``positional=False``).
+            Make this a named argument, using an equals to separate the value
+            from the argument name, for example, ``{% tag limit=10 %}``.
 
             Defaults to ``False``.
+
+        :param named:
+            Make this a named argument, using an space to separate the argument
+            name from its value, for example, ``{% tag limit 10 %}``. 
+
+            Defaults to ``False``.
+
+
+        The ``named`` and ``keyword`` parameters can not both be set to
+        ``True``.
         """
         self.required = required
         self.default = default
         self.null = null
-        self.positional = positional
+        self.named = named
         self.keyword = keyword
+        if self.named and self.keyword:
+            raise TemplateSyntaxError('Argument can not have both "named" and '
+                '"keyword" argument parameters set to True.')
 
         # Increase the creation counter, and save our local copy.
         self.creation_counter = Arg.creation_counter
         Arg.creation_counter += 1
+
+    @property
+    def positional(self):
+        return not self.named and not self.keyword
 
     def consume(self, parser, tokens, valid_named_args):
         """
@@ -197,12 +205,16 @@ class BooleanArg(Arg):
                     return "Uncool."
     """
 
-    def __init__(self, required=False, *args, **kwargs):
+    def __init__(self):
         """
-        The change the default of the ``required`` argument to ``False``,
-        since it makes little sense otherwise.
+        Don' accept parameters for this argument, and pass ``required=False``
+        and ``named=True`` to the super __init__ method since this argument
+        makes little sense otherwise.
         """
-        super(BooleanArg, self).__init__(required=required, *args, **kwargs)
+        super(BooleanArg, self).__init__(required=False, named=True)
+        self.required = False
+        self.named = True
+        self.keyword = False
 
     def consume(self, parser, tokens, valid_named_args):
         """
@@ -263,10 +275,11 @@ class ConstantArg(BasicArg):
 
     def __init__(self, *args, **kwargs):
         """
-        The ``positional`` parameter is ignored and always set to ``True``.
+        Ensure this is a positional argument.
         """
         super(ConstantArg, self).__init__(*args, **kwargs)
-        self.positional = True
+        if not self.positional:
+            raise TemplateSyntaxError("This argument must be positional.")
 
     def consume(self, *args, **kwargs):
         """

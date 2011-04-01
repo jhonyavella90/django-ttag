@@ -58,8 +58,8 @@ class TagExecutionTests(TestCase):
 def build_invalid_positional_optional():
 
     class Tag(ttag.Tag):
-        start = ttag.Arg(positional=True, required=False)
-        end = ttag.Arg(positional=True)
+        start = ttag.Arg(required=False)
+        end = ttag.Arg()
 
 
 class PositionalTest(TestCase):
