@@ -1,12 +1,11 @@
 from django import template
 
-from ttag import utils
-from ttag.args import Arg
+from ttag import utils, args
 
 
 class Options(object):
 
-    def __init__(self, meta=None, *args, **kwargs):
+    def __init__(self, meta, *args, **kwargs):
         super(Options, self).__init__(*args, **kwargs)
         self.positional_args = []
         self.named_args = {}
@@ -26,8 +25,12 @@ class Options(object):
         if hasattr(self, '_args'):
             del self._args
 
+    def post_process(self):
+        pass
+
 
 class DeclarativeArgsMetaclass(type):
+    options_class = Options
 
     def __new__(cls, name, bases, attrs):
         super_new = super(DeclarativeArgsMetaclass, cls).__new__
@@ -39,7 +42,7 @@ class DeclarativeArgsMetaclass(type):
             meta = attrs.pop('Meta')
         except KeyError:
             meta = None
-        opts = Options(meta)
+        opts = cls.options_class(meta)
 
         library = getattr(meta, 'library', None)
         if library:
@@ -55,7 +58,8 @@ class DeclarativeArgsMetaclass(type):
         name = opts.name
 
         all_args = [(arg_name.rstrip('_'), attrs.pop(arg_name))
-                    for arg_name, obj in attrs.items() if isinstance(obj, Arg)]
+                    for arg_name, obj in attrs.items()
+                    if isinstance(obj, args.Arg)]
         all_args.sort(key=lambda x: x[1].creation_counter)
 
         # Put the positional and named arguments in their respective places.
@@ -78,10 +82,10 @@ class DeclarativeArgsMetaclass(type):
             else:
                 opts.named_args[arg_name] = arg
 
-        # If this class is subclassing another TemplateTag, add that tag's
-        # positional arguments before ones declared here. The bases are looped
-        # in reverse to preserve the correct order of positional arguments and
-        # correctly override named arguments.
+        # If this class is subclassing another Tag, add that tag's positional
+        # arguments before ones declared here. The bases are looped in reverse
+        # to preserve the correct order of positional arguments and correctly
+        # override named arguments.
         for base in bases[::-1]:
             base_opts = getattr(base, '_meta', None)
             if hasattr(base_opts, 'positional_args'):
@@ -93,6 +97,8 @@ class DeclarativeArgsMetaclass(type):
                         opts.named_args[arg_name] = arg
 
         attrs['_meta'] = opts
+
+        opts.post_process()
 
         # Create the new class.
         new_class = super_new(cls, name, bases, attrs)
@@ -139,10 +145,18 @@ class BaseTag(template.Node):
             for attr, nodelist in nodelists:
                 setattr(self, attr, nodelist)
 
+    def _valid_named_args(self):
+        """
+        Return a list of named arguments. Keyword arguments are appended with a
+        ``=`` so they can be checked for in :meth:`Arg.is_token_named_arg`.
+        """
+        return [arg.keyword and '%s=' % name or name
+                for name, arg in self._meta.named_args.iteritems()]
+
     def _process_positional_args(self, parser, tokens):
-        valid_arg_names = self._meta.named_args.keys()
+        named_args = self._valid_named_args()
         for arg in self._meta.positional_args:
-            value = arg.consume(parser, tokens, valid_arg_names)
+            value = arg.consume(parser, tokens, named_args)
             if value is None:
                 if arg.default is not None:
                     self._vars[arg.name] = arg.default
@@ -157,9 +171,7 @@ class BaseTag(template.Node):
                 self._vars[arg.name] = value
 
     def _process_named_args(self, parser, tokens):
-        named_args = [arg.keyword and '%s=' % name or name
-                      for name, arg in self._meta.named_args.iteritems()]
-
+        named_args = self._valid_named_args()
         while tokens:
             arg_name = tokens[0]
             keyword = '=' in arg_name
@@ -214,9 +226,7 @@ class BaseTag(template.Node):
         return self.output(data)
 
     def output(self, data):
-        raise NotImplementedError(
-            "TemplateTag subclasses must implement this method."
-        )
+        raise NotImplementedError("Tag subclasses must implement this method.")
 
     def resolve(self, context):
         """

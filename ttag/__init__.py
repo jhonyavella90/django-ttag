@@ -4,6 +4,7 @@ try:
         ModelInstanceArg, StringArg, TimeArg
     from ttag.core import Tag
     from ttag.exceptions import TagArgumentMissing, TagValidationError
+    from ttag import helpers
 except ImportError:
     # This allows setup.py to skip import errors which may occur if ttag is
     # being installed at the same time as Django.

@@ -1,0 +1,1 @@
+from ttag.helpers.as_tag import AsTag
