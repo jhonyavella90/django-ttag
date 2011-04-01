@@ -9,8 +9,8 @@ The tag syntax is modelled on Django's friendly syntaxes for models and forms.
 Here is a full example tag::
 
     class Welcome(ttag.Tag)
-        user = ttag.Arg(positional=True)
-        fallback = ttag.Arg(default='Hi!')
+        user = ttag.Arg()
+        fallback = ttag.Arg(named=True, default='Hi!')
 
         def output(self, data)
             name = data['user'].get_full_name()

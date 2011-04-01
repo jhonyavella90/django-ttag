@@ -64,72 +64,80 @@ This would create a tag ``{% hi %}``, rather than ``{% welcome %}``.
 Defining arguments
 ==================
 
-The standard argument format is ``[argument name] [value]``, for example:
+By default, arguments are positional, meaning that they must appear in the
+tag in the order they are defined in your tag class.
 
-    * ``{% get_people as something %}`` has an argument named ``as``.
-    * ``{% show_people country "NZ" limit 10 %}`` has two arguments,
-      ``country`` and ``limit``. They could potentially be marked as optional
-      and can be listed in any order)
-    * ``{% show_countries populated_only %} has a boolean argument,
-      demonstrating that an argument may not always take a single value.
-      Boolean arguments take no values, and a special argument type could take
-      more than one value (for example, :class:`ttag.KeywordsArg`).
-
-Arguments are usually resolved against the template context. For simpler cases,
-you can use :class:`ttag.BasicArg`.
-
-Here's an example of how the ``{% get_people %}`` tag may look like::
-
-    class GetPeople(ttag.Tag):
-        as_ = ttag.BasicArg()
-
-        def render(self, context):
-            data = self.resolve(context)
-            context[data['as']] = People.objects.all()
-            return ''
-
-Note that since ``as`` is a Python keyword, we're appending an underscore.
-This is only used during the definition; the argument name can be referenced
-with (and is stored with) this underscore stripped.
-
-A helper tag is available for this common 'as context_var' pattern named
-:class:`ttag.AsTag`.
-
-
-Positional arguments
---------------------
-
-When you don't want the argument name as part of the tag definition, you can
-make the argument positional. The order of positional arguments defined in your
-class is the order they will be consumed.
-
-Here is an example of a positional argument used to extend the basic
-``{% welcome %}`` example tag above so we can greet the user personally::
+Here is an example of using arguments to extend the basic ``{% welcome %}``
+example tag above so we can greet the user personally::
 
     class Welcome(ttag.Tag):
-        user = ttag.Arg(positional=True)
+        user = ttag.Arg()
 
         def output(self, data):
             name = data['user'].get_full_name()
             return "Hi, %s!" % name
 
-The tag now has one positional tag which will be used to get the user from the
-template context.
+The tag would then be used like: ``{% welcome user %}``
 
-Keyword argument format
------------------------
+Arguments are usually resolved against the template context. For simpler cases
+where you don't want this behaviour, use :class:`ttag.BasicArg`.
 
-When using several named arguments, space-separated named arguments can start
-to look a bit confusing. For these cases, you may want to use the named keyword
-argument format (``name=value``)::
+Sometimes, the argument name you want to use is a Python keyword and can't be
+used as a class attribute (such as ``with``, ``as``, ``and``, etc.). In these
+cases append an underscore::
+
+    class Format(ttag.Tag):
+        as_ = ttag.Arg()
+
+This is only used during the definition; the argument name is stored without
+(and therefore should be referenced without) this trailing underscore.
+
+Named arguments
+---------------
+
+Arguments can alternatively be marked as a named argument. In these cases
+the argument name is part of the tag definition in the template.
+
+Named arguments can be defined in the template tag in any order.
+
+Here are a few examples of named arguments::
+
+    * ``{% slap with fish %}`` has an argument named ``with``.
+    * ``{% show_people country "NZ" limit 10 %}`` has two named arguments,
+      ``country`` and ``limit``. They could potentially be marked as optional
+      and can be listed in any order.
+    * ``{% show_countries populated_only %} has a boolean argument,
+      demonstrating that an argument may not always take a single value.
+      Boolean arguments take no values, and a special argument type could take
+      more than one value (for example, :class:`ttag.KeywordsArg`).
+
+Space separated arguments
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The first named argument format looks like ``[argument name] [value]``, for
+example:
+
+Here's an example of what the ``{% slap %}`` tag above may look like::
+
+    class Slap(ttag.Tag):
+        with_ = ttag.Arg()
+
+        def output(self, data):
+            return "You have been slapped with a %s" % data['with']
+
+Keyword arguments
+~~~~~~~~~~~~~~~~~
+
+An alternate named argument format is to use keyword arguments::
 
     class Output(ttag.Tag):
+        list_ = self.Arg()
         limit = self.Arg(keyword=True)
         offset = self.Arg(keyword=True)
 
 This would result in a tag which can be used like this::
 
-    {% output limit=some_limit|default:1 offset=profile.offset %}
+    {% output people limit=10 offset=report.offset %}
 
 .. note::
 
@@ -259,7 +267,7 @@ instance name passed in.  It demonstrates using the various ``Arg`` types::
 
         {% tweak_name instance [offset=0] [limit=10] [reverse] %}
         """
-        instance = ttag.ModelInstanceArg(positional=True, model=NamedModel))
+        instance = ttag.ModelInstanceArg(model=NamedModel)
         offset = ttag.IntegerArg(default=0, keyword=True)
         limit = ttag.IntegerArg(default=10, keyword=True)
         reverse = ttag.BooleanArg()

@@ -51,7 +51,6 @@ class Arg(object):
 
             Defaults to ``False``.
 
-
         The ``named`` and ``keyword`` parameters can not both be set to
         ``True``.
         """

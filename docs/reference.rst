@@ -109,8 +109,8 @@ If the property name clashes with a append a trailing slash - it will be
 removed from the argument's ``name``. For example, pay attention to the ``as_``
 argument in the tag below::
 
-    class SetTag(ttag.Tag):
-        value = ttag.Arg(positional=True)
+    class Set(ttag.Tag):
+        value = ttag.Arg()
         as_ = ttag.BasicArg()
 
         def render(self, context):
@@ -122,53 +122,52 @@ argument in the tag below::
 Positional arguments
 --------------------
 
-An argument may be marked as positional by using the ``positional`` flag::  
+By default, an argument is considered positional::  
 
-    class PositionalTag(ttag.Tag):
-        first = ttag.Arg(positional=True)
-        second = ttag.Arg(positional=True)
+    class Positional(ttag.Tag):
+        first = ttag.Arg()
+        second = ttag.Arg()
 
 This would result in a tag named ``positional`` which took two required
 arguments, which would be assigned to ``'first'`` and ``'second'`` items
 of the data dictionary returned by the ``resolve`` method.
 
 Use the ``ConstantArg`` for simple required string-based arguments which assist
-readability (this Arg assumes ``positional=True``)::
+readability::
 
-    class MeasureTag(ttag.Tag):
-        start = ttag.Arg(positional=True)
+    class Measure(ttag.Tag):
+        start = ttag.Arg()
         to = ttag.ConstantArg()
-        finish = ttag.Arg(positional=True)
+        finish = ttag.Arg()
 
 Named arguments
 ---------------
 
 Named arguments can appear in any order in a tag's arguments, after the
-positional arguments.  They are specified as follows::
+positional arguments.
 
-    class NamedTag(ttag.Tag):
-        limit = ttag.Arg(required=False)
-        offset = ttag.Arg(required=False)
+The standard type of named argument uses space separation::
 
-This would create a tag named ``named`` which took two optional arguments,
+    class Named(ttag.Tag):
+        limit = ttag.Arg(named=True)
+        offset = ttag.Arg(named=True)
+
+This would create a tag named ``named`` which took two named arguments,
 ``limit`` and ``offset``.  They could be specified in any order::
-
-    {% named %}
-
-    {% named limit 10 %}
-
-    {% named offset 25 %}
 
     {% named limit 15 offset 42 %}
 
     {% named offset 4 limit 12 %}
 
-If you prefer "keyword" style named arguments (e.g. ``{% named offset=25 %},
+Alternatively, named arguments can use "keyword" style named arguments::
 you can use the ``keyword`` parameter::
 
-    class NamedTag(ttag.Tag):
-        limit = ttag.Arg(required=False, keyword=True)
-        offset = ttag.Arg(required=False, keyword=True)
+    class Named(ttag.Tag):
+        limit = ttag.Arg(keyword=True)
+        offset = ttag.Arg(keyword=True)
+
+Which would be used by:
+    {% named offset 4 limit 12 %}
 
 If an optional argument is not specified in the template, it will not be
 added to the data dictionary. Alternately, use ``default`` to have a default
@@ -189,7 +188,7 @@ validation.
 Arg
 ---
 
-.. class:: Arg(required=True, default=None, null=False, positional=False, keyword=False)
+.. class:: Arg(required=True, default=None, null=False, keyword=False, named=False)
 
     A standard argument in a :class:`Tag`. Used as a base class for all other
     argument classes.
@@ -219,20 +218,19 @@ Arg
 
         Defaults to ``False``.
 
-    :param positional:
-        Whether this is a positional tag (i.e. the argument name is not part of
-        the tag definition).  
-
-        Defaults to ``False``.
-
     :param keyword:
-        Use an equals to separate the value from the argument name, rather than
-        the standard space separation.
-
-        This parameter is only used for named arguments (i.e.
-        ``positional=False``).
+        Make this a named argument, using an equals to separate the value
+        from the argument name, for example, ``{% tag limit=10 %}``.
 
         Defaults to ``False``.
+
+    :param named:
+        Make this a named argument, using an space to separate the argument
+        name from its value, for example, ``{% tag limit 10 %}``. 
+
+        Defaults to ``False``.
+
+    The ``named`` and ``keyword`` parameters can not both be set to ``True``.
 
 
 Validation Arguments
@@ -259,7 +257,7 @@ Validation Arguments
 
     For example::
 
-        class CoolTag(ttag.Tag)
+        class Cool(ttag.Tag)
             cool = ttag.BooleanArg()
 
             def output(self, data):
