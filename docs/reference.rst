@@ -125,8 +125,8 @@ Positional arguments
 By default, an argument is considered positional::  
 
     class Positional(ttag.Tag):
-        first = ttag.Arg()
-        second = ttag.Arg()
+        first = ttag.Arg(positional=True)
+        second = ttag.Arg(positional=True)
 
 This would result in a tag named ``positional`` which took two required
 arguments, which would be assigned to ``'first'`` and ``'second'`` items
