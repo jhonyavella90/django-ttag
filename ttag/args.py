@@ -424,3 +424,26 @@ class KeywordsArg(Arg):
             keywords[key] = super(KeywordsArg, self).resolve(val, context,
                                                              *args, **kwargs)
         return keywords
+
+
+class MultiArg(Arg):
+    """
+    Parses all positional arguments (until all the tokens are consumed or a
+    named keyword argument is hit).
+    """
+    def consume(self, parser, tokens, valid_named_args):
+        """
+        Consume one or more keyword arguments.
+        """
+        args = []
+        while tokens:
+            token = self.consume_one(tokens, required=False,
+                                     valid_named_args=valid_named_args)
+            if not token:
+                break
+            value = self.compile_filter(parser, token)
+            args.append(value)
+        if self.required and not args:
+            raise TemplateSyntaxError("No positional arguments provided for "
+                                      "'%s'" % self.name)
+        return args

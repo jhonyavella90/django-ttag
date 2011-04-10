@@ -248,25 +248,6 @@ Validation Arguments
     template error.
 
 
-.. class:: BooleanArg
-
-    A "flag" argument which doesn't consume any additional tokens.
-
-    If it is not defined in the tag, the argument value will not exist in the
-    resolved data dictionary.
-
-    For example::
-
-        class Cool(ttag.Tag)
-            cool = ttag.BooleanArg()
-
-            def output(self, data):
-                if 'cool' in data:
-                    return "That's cool!"
-                else:
-                    return "Uncool."
-
-
 .. class:: IsInstanceArg(..., cls, cls_name)
 
     Validates that the argument is an instance of the provided class (``cls``),
@@ -308,6 +289,25 @@ Validation Arguments
 Other Arguments
 ---------------
 
+.. class:: BooleanArg
+
+    A "flag" argument which doesn't consume any additional tokens.
+
+    If it is not defined in the tag, the argument value will not exist in the
+    resolved data dictionary.
+
+    For example::
+
+        class Cool(ttag.Tag)
+            cool = ttag.BooleanArg()
+
+            def output(self, data):
+                if 'cool' in data:
+                    return "That's cool!"
+                else:
+                    return "Uncool."
+
+
 .. class:: BasicArg
 
     A simpler argument which doesn't compile its value as a
@@ -322,6 +322,31 @@ Other Arguments
                 data = self.resolve(data)
                 context[data['as']] = Users.objects.all()
                 return '' 
+
+
+.. class:: MultiArg
+
+    Greedily parses all remaining positional arguments.
+
+    Stops when all the tag tokens tokens are consumed or named keyword argument
+    is hit. For example::
+
+        class DotConcat(ttag.Tag):
+            bits = ttag.MultiArg()
+            default = ttag.Arg(named=True, required=False)
+
+            def output(self, data):
+                bits = []
+                default = data.get('default', '')
+                for bit in data['bits']:
+                    bits.append([force_unicode(bit) or default])
+                return '.'.join(bits)
+
+    This tag could be used like this::
+
+        {% dot_concat "a" "" "c" default "X" %}
+
+    Resulting in ``a.X.c``.
 
 
 .. class:: KeywordsArg(..., compact=True, verbose=False, compile_values=True)
