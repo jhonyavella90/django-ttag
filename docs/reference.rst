@@ -132,8 +132,8 @@ This would result in a tag named ``positional`` which took two required
 arguments, which would be assigned to ``'first'`` and ``'second'`` items
 of the data dictionary returned by the ``resolve`` method.
 
-Use the ``ConstantArg`` for simple required string-based arguments which assist
-readability::
+Use the :class:`ConstantArg` for simple required string-based arguments which
+assist readability::
 
     class Measure(ttag.Tag):
         start = ttag.Arg()
@@ -234,7 +234,7 @@ Arg
 
 
 Casting Arguments
-------------------
+-----------------
 
 .. class:: IntegerArg
 
@@ -318,13 +318,33 @@ Other Arguments
 
     Example usage::
 
-        class GetUsers(ttag.Tag)
+        class GetUsers(ttag.Tag):
             as_ = ttag.BasicArg()
 
-            def render(self, context)
+            def render(self, context):
                 data = self.resolve(data)
                 context[data['as']] = Users.objects.all()
                 return '' 
+
+
+.. class:: ConstantArg
+
+    An argument which expects it's value to be a constant (non-compiled) value,
+    usually used to enhance tag readability.
+
+    Cannot be a named or keyword argument.
+
+    Example usage::
+
+        class Range(ttag.Tag):
+            start = ttag.IntegerArg()
+            to_ = ttag.ConstantArg()
+            finish = ttag.IntegerArg()
+
+            def output(self, data):
+                start = data['start']
+                finish = data['finish'] + 1
+                return ', '.join([str(num) for num in range(start, finish)])
 
 
 .. class:: MultiArg

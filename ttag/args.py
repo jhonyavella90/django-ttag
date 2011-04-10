@@ -256,6 +256,31 @@ class StringArg(Arg):
         return force_unicode(value)
 
 
+class ConstantArg(BasicArg):
+    """
+    A positional only argument which must be a constant (non-compiled) value.
+    """
+
+    def __init__(self, *args, **kwargs):
+        """
+        Ensure this is a positional argument.
+        """
+        super(ConstantArg, self).__init__(*args, **kwargs)
+        if not self.positional:
+            raise TemplateSyntaxError("This argument must be positional.")
+
+    def consume(self, *args, **kwargs):
+        """
+        Consume the next token, ensuring its value matches the :attr:`name` of
+        this argument.
+        """
+        value = super(ConstantArg, self).consume(*args, **kwargs)
+        if value != self.name:
+            raise TemplateSyntaxError("Expected constant '%s' instead of '%s'"
+                                      % (self.name, value))
+        return value
+
+
 class IsInstanceArg(Arg):
     """
     This is a base class for easily creating arguments which require a specific
@@ -281,28 +306,6 @@ class IsInstanceArg(Arg):
                 self.error_message % {'arg_name': self.name, 'value': value,
                                       'class_name': class_name}
             )
-        return value
-
-
-class ConstantArg(BasicArg):
-
-    def __init__(self, *args, **kwargs):
-        """
-        Ensure this is a positional argument.
-        """
-        super(ConstantArg, self).__init__(*args, **kwargs)
-        if not self.positional:
-            raise TemplateSyntaxError("This argument must be positional.")
-
-    def consume(self, *args, **kwargs):
-        """
-        Consume the next token, ensuring its value matches the :attr:`name` of
-        this argument.
-        """
-        value = super(ConstantArg, self).consume(*args, **kwargs)
-        if value != self.name:
-            raise TemplateSyntaxError("Expected constant '%s' instead of '%s'"
-                                      % (self.name, value))
         return value
 
 
