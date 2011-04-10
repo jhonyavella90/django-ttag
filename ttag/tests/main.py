@@ -212,6 +212,12 @@ class TestArgumentTypes(TestCase):
         self.assertEqual(render('{% argument_type %}'), '')
         self.assertEqual(render('{% argument_type flag %}'), 'flag_is_set')
 
+    def test_multi_arg(self):
+        self.assertEqual(render('{% dot_combine 1 2 3 4 %}'), '1.2.3.4')
+        self.assertEqual(
+            render('{% dot_combine_default "a" b "c" default "X" %}',
+                   {'b': None}), 'a.X.c')
+
 
 class KeywordsArgTest(TestCase):
     compact_kwargs = ' "file.html" with foo=x bar=2 %}'

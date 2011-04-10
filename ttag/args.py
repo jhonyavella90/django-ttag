@@ -455,3 +455,9 @@ class MultiArg(Arg):
             raise TemplateSyntaxError("No positional arguments provided for "
                                       "'%s'" % self.name)
         return args
+
+    def resolve(self, value, context):
+        """
+        Resolve each argument.
+        """
+        return [super(MultiArg, self).resolve(arg, context) for arg in value]

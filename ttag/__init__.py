@@ -1,7 +1,7 @@
 try:
     from ttag.args import Arg, BasicArg, BooleanArg, ConstantArg, DateArg, \
         DateTimeArg, IntegerArg, IsInstanceArg, KeywordsArg, \
-        ModelInstanceArg, StringArg, TimeArg
+        ModelInstanceArg, StringArg, TimeArg, MultiArg
     from ttag.core import Tag
     from ttag.exceptions import TagArgumentMissing, TagValidationError
     from ttag import helpers

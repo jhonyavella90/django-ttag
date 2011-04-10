@@ -1,4 +1,5 @@
 from django import template
+from django.utils.encoding import force_unicode
 
 import ttag
 from ttag.core import BaseTag, DeclarativeArgsMetaclass
@@ -122,6 +123,23 @@ class KeywordsEcho(TestTag):
     def output(self, data):
         keywords = data['keywords'].items()
         return ', '.join('%s: %s' % (key, value) for key, value in keywords)
+
+
+class DotCombine(TestTag):
+    args = ttag.MultiArg()
+
+    def output(self, data):
+        args = [force_unicode(arg) for arg in data['args']]
+        return '.'.join(args)
+
+
+class DotCombineDefault(DotCombine):
+    default = ttag.Arg(named=True)
+
+    def output(self, data):
+        args = [arg and force_unicode(arg) or data['default']
+                for arg in data['args']]
+        return '.'.join(args)
 
 
 class BaseInclude(TestTag):
