@@ -152,11 +152,17 @@ class TestArgumentTypes(TestCase):
                                 {'dave': 'Dave'}),
                          'Dave')
 
-        # Fail if variable or value isn't a string.
-        self.assertRaises(ttag.TagValidationError, render,
-                          '{% argument_type name 123 %}')
-        self.assertRaises(ttag.TagValidationError, render,
-                          '{% argument_type name dave %}', {'dave': 1})
+        # Values are cast to unicode.
+        class Name(object):
+            
+            def __init__(self, name):
+                self.name = name
+
+            def __unicode__(self):
+                return self.name
+
+        self.assertEqual(render('{% argument_type name dave %}',
+                                {'dave': Name('dave')}), 'dave')
 
         # Fail if the variable isn't in the context.
         self.assertRaises(ttag.TagValidationError, render,

@@ -1,6 +1,7 @@
 import datetime
 import re
 from django.template import TemplateSyntaxError, FilterExpression
+from django.utils.encoding import force_unicode
 from ttag.exceptions import TagValidationError
 
 
@@ -242,6 +243,19 @@ class IntegerArg(Arg):
         return value
 
 
+class StringArg(Arg):
+    """
+    Tries to cast the argument value to unicode, throwing a template error
+    template error otherwise.
+    """
+
+    def clean(self, value):
+        """
+        Force to unicode.
+        """
+        return force_unicode(value)
+
+
 class IsInstanceArg(Arg):
     """
     This is a base class for easily creating arguments which require a specific
@@ -290,15 +304,6 @@ class ConstantArg(BasicArg):
             raise TemplateSyntaxError("Expected constant '%s' instead of '%s'"
                                       % (self.name, value))
         return value
-
-
-class StringArg(IsInstanceArg):
-    """
-    Validates that the argument is a ``string`` instance, otherwise throws a
-    template error.
-    """
-    cls = basestring
-    error_message = "Value for '%(arg_name)s' must be a string"
 
 
 class DateTimeArg(IsInstanceArg):

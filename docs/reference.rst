@@ -233,20 +233,23 @@ Arg
     The ``named`` and ``keyword`` parameters can not both be set to ``True``.
 
 
-Validation Arguments
---------------------
+Casting Arguments
+------------------
 
 .. class:: IntegerArg
 
-    Validates that the argument is an integer, otherwise throws a template
-    error.
+    Tries to cast the argument value to an integer, throwing a template error
+    if this fails.
 
 
 .. class:: StringArg
 
-    Validates that the argument is a ``string`` instance, otherwise throws a
-    template error.
+    Tries to cast the argument value to unicode, throwing a template error if
+    this fails.
 
+
+Validation Arguments
+--------------------
 
 .. class:: IsInstanceArg(..., cls, cls_name)
 
