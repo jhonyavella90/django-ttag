@@ -63,6 +63,10 @@ class Arg(object):
         if self.named and self.keyword:
             raise TemplateSyntaxError('Argument can not have both "named" and '
                 '"keyword" argument parameters set to True.')
+        
+        # Args are never required if a default is set.
+        if default is not None:
+            self.required = False
 
         # Increase the creation counter, and save our local copy.
         self.creation_counter = Arg.creation_counter
