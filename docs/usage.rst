@@ -155,29 +155,55 @@ arguments.
    define arguments and show an example
 
 
-Altering context
-================
+Using context
+=============
 
-.. todo::
+The :meth:`~ttag.Tag.output` method which we have used so far is just a
+shortcut the :meth:`~ttag.Tag.render`.
 
-   explain that output() is a ust shortcut and that render() can be used
-   (with resolve()).
+The shortcut method doesn't provide direct access to the context, so if you
+need alter the context, or check other context variables, you can use
+:meth:`~ttag.Tag.render` directly.
 
-   Perhaps use the common 'as var' as the example.
+.. note:: The :class:`ttag.helpers.AsTag` class is available for the common
+          case of tags that end in ``... as something %}``. 
+
+For example::
+
+    class GetHost(ttag.Tag):
+        """
+        Returns the current host. Requires that ``request`` is on the template
+        context.
+        """
+
+        def render(self, context):
+            print context['request'].get_host()
+
+Use :meth:`~ttag.Tag.resolve` to resolve the tag's arguments into a data
+dictionary::
+
+    class Welcome(ttag.Tag):
+        user = ttag.Arg()
+
+        def render(self, context):
+            context['welcomed'] = True
+            data = self.resolve(context)
+            name = data['user'].get_full_name()
+            return "Hi, %s!" % name
 
 
 Cleaning arguments
 ==================
 
-.. todo::
+You can validate / clean arguments similar to Django's forms.
 
-   You can validate / clean arguments similar to Forms.
+To clean an individual argument, use a ``clean_[argname](value)`` method.
+Ensure that your method returns the cleaned value.
 
-   ``clean_[argname](value)`` (must return the cleaned value)
+After the individual arguments are cleaned, a ``clean(data)`` method is run.
+This method must return the cleaned data dictionary.
 
-   ``clean(data)`` (must returned the cleaned data dictionary)
-
-   Use the ``ttag.TagValidationError`` exception to raise validation errors.
+Use the ``ttag.TagValidationError`` exception to raise validation errors.
 
 
 Writing a block tag

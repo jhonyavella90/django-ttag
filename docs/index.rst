@@ -17,4 +17,5 @@ application.
 
    install
    usage
+   helpers
    reference
