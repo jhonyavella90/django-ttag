@@ -42,7 +42,7 @@ class NoArgument(TestTag):
 
 
 class Positional(TestTag):
-    limit = ttag.IntegerArg(default=5)
+    limit = ttag.IntegerArg()
 
     def output(self, data):
         return '%s' % data['limit']

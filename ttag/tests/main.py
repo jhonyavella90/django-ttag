@@ -24,9 +24,13 @@ class TagExecutionTests(TestCase):
                          'The limit is %d' %
                          tags.NamedArg._meta.args['limit'].default)
 
+        # Reset the limit tag to have no default (and be required, which is set
+        # to False if a default was given.
         tags.NamedArg._meta.args['limit'].default = None
+        tags.NamedArg._meta.args['limit'].required = True
 
-        self.assertRaises(template.TemplateSyntaxError, render, '{% named_arg %}')
+        self.assertRaises(template.TemplateSyntaxError, render,
+            '{% named_arg %}')
 
     def test_named(self):
         """
