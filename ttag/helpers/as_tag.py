@@ -12,7 +12,7 @@ class AsTagOptions(core.Options):
 
     def post_process(self):
         super(AsTagOptions, self).post_process()
-        if self.as_name in [name for name, arg in self.named_args
+        if self.as_name in [name for name, arg in self.named_args.items()
                             if not arg.keyword]:
             raise template.TemplateSyntaxError(
                 "%s can not explicitly define an named argument called %r" % (
