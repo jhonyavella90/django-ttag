@@ -1,7 +1,8 @@
-Version post-1.0
-----------------
+Version 2.0
+===========
 
 Backwards Incompatible changes
+------------------------------
 
 * Changed ``Arg.clean`` to require both ``data`` and ``context`` as parameters.
 
