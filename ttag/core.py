@@ -28,6 +28,14 @@ class Options(object):
     def post_process(self):
         pass
 
+    def _get_end_block(self):
+        return self._end_block % {'name': self.name}
+
+    def _set_end_block(self, value):
+        self._end_block = value
+
+    end_block = property(_get_end_block, _set_end_block)
+
 
 class DeclarativeArgsMetaclass(type):
     options_class = Options
@@ -245,7 +253,7 @@ class BaseTag(template.Node):
         for name, value in self._vars.iteritems():
             arg = self._meta.args[name]
             value = arg.resolve(value, context)
-            value = arg.base_clean(value)
+            value = arg.clean(value)
             try:
                 tag_arg_clean = getattr(self, 'clean_%s' % arg.name)
             except AttributeError:

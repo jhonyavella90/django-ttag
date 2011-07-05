@@ -1,6 +1,7 @@
 import datetime
 import re
-from django.template import TemplateSyntaxError, FilterExpression
+from django.template import TemplateSyntaxError, FilterExpression, Variable, \
+    VariableDoesNotExist
 from django.utils.encoding import force_unicode
 from ttag.exceptions import TagValidationError
 
@@ -31,12 +32,11 @@ class Arg(object):
             Defaults to ``None``.
 
         :param null:
-            Determines whether a value of ``None`` is an acceptable value for
-            the argument resolution.
+            Determines whether missing context variables should be replaced
+            with ``None``.
 
-            When set to ``False``, a value of ``None`` or a missing context
-            variable will cause a ``TagValidationError`` when this
-            argument is cleaned.
+            When set to ``False``, a missing context variable will cause a
+            ``TagValidationError`` when this argument is resolved.
 
             Defaults to ``False``.
 
@@ -63,7 +63,7 @@ class Arg(object):
         if self.named and self.keyword:
             raise TemplateSyntaxError('Argument can not have both "named" and '
                 '"keyword" argument parameters set to True.')
-        
+
         # Args are never required if a default is set.
         if default is not None:
             self.required = False
@@ -139,22 +139,29 @@ class Arg(object):
         This method is usually overridden by subclasses which also override
         :meth:`consume` to return different number of resolved values.
         """
-        if not isinstance(value, FilterExpression):
+        if not isinstance(value, (Variable, FilterExpression)):
             return value
-        return value.resolve(context, ignore_failures=True)
-
-    def base_clean(self, value):
-        """
-        Ensure the resolved ``value`` is not ``None`` if :attr:`null` is
-        ``True``.
-
-        Subclasses should override :meth:`clean` instead of this method.
-        """
-        if not self.null and value is None:
-            raise TagValidationError(
-                "Value for '%s' must not be null." % self.name
-            )
-        return self.clean(value)
+        if isinstance(value, Variable):
+            resolved_value = value
+        else:
+            resolved_value = value.var
+        if isinstance(resolved_value, Variable):
+            try:
+                resolved_value = resolved_value.resolve(context)
+            except VariableDoesNotExist:
+                if not self.null:
+                    raise TagValidationError(
+                        "Variable '%s' was not found." % resolved_value.var
+                    )
+                resolved_value = None
+        if isinstance(value, Variable):
+            value = resolved_value
+        else:
+            obj = FilterExpression(token=value.token, parser=None)
+            obj.filters = value.filters
+            obj.val = resolved_value
+            value = obj.resolve(context)
+        return value
 
     def clean(self, value):
         """

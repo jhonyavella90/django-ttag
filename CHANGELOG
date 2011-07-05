@@ -3,4 +3,8 @@ Version post-1.0
 
 Backwards Incompatible changes
 
-* Changed ``Arg.clean`` to require both ``data`` and ``context`` as parameters.  
+* Changed ``Arg.clean`` to require both ``data`` and ``context`` as parameters.
+
+* Changed the function of the ``null`` parameter of ``Arg.__init__``. Now,
+  when set to ``False`` (default), an exception is raised on a missing context
+  variable. When ``True``, a missing context variable is set to ``None``. 
