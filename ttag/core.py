@@ -211,7 +211,7 @@ class BaseTag(template.Node):
                                                            self._meta.name)
                 )
 
-    def clean(self, data):
+    def clean(self, data, context):
         """
         Additional tag-wide argument cleaning after each individual Arg's
         ``clean`` has been called.
@@ -253,7 +253,7 @@ class BaseTag(template.Node):
             else:
                 value = tag_arg_clean(value)
             data[name] = value
-        data = self.clean(data)
+        data = self.clean(data, context)
         return data
 
 

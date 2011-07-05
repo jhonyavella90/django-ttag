@@ -200,8 +200,8 @@ You can validate / clean arguments similar to Django's forms.
 To clean an individual argument, use a ``clean_[argname](value)`` method.
 Ensure that your method returns the cleaned value.
 
-After the individual arguments are cleaned, a ``clean(data)`` method is run.
-This method must return the cleaned data dictionary.
+After the individual arguments are cleaned, a ``clean(data, context)`` method
+is run. This method must return the cleaned data dictionary.
 
 Use the ``ttag.TagValidationError`` exception to raise validation errors.
 
