@@ -261,7 +261,12 @@ class BaseTag(template.Node):
             else:
                 value = tag_arg_clean(value)
             data[name] = value
-        data = self.clean(data, context)
+        try:
+            data = self.clean(data, context)
+        except TypeError:
+            # Before version 2.0, clean accepted only the data parameter, keep
+            # supporting that.
+            data = self.clean(data)
         return data
 
 

@@ -1,3 +1,10 @@
+Version 2.1
+===========
+
+* Added backwards compatibility for ``Arg.clean``, so it can once again just
+  have ``data`` as the only parameter. 
+
+
 Version 2.0
 ===========
 
