@@ -9,7 +9,6 @@ if not settings.configured:
         DATABASE_ENGINE='sqlite3',
         INSTALLED_APPS=[
             'ttag',
-            'ttag.tests.setup',
         ],
     )
 

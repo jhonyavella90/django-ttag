@@ -1,7 +1,9 @@
+from os import path
 import datetime
 
-from django.test import TestCase
 from django import template
+from django.conf import settings
+from django.test import TestCase
 
 import ttag
 from ttag.tests.setup import as_tags, template_tags
@@ -49,11 +51,17 @@ class AsTag(TestCase):
             class BadTag(ttag.helpers.AsTag):
                 as_ = ttag.Arg(named=True)
 
-
         self.assertRaises(template.TemplateSyntaxError, make_bad_tag)
 
 
 class TemplateTag(TestCase):
+
+    def setUp(self):
+        self.old_template_dirs = settings.TEMPLATE_DIRS
+        settings.TEMPLATE_DIRS = [path.join(path.dirname(__file__), 'templates')]
+
+    def tearDown(self):
+        settings.TEMPLATE_DIRS = self.old_template_dirs
 
     def test_simple(self):
         """
