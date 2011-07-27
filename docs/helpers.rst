@@ -60,7 +60,7 @@ TemplateTag
 
     For example, if you wanted a tag which would render a QuerySet containing
     a user's friends with a specific template
-    (``{% render_friends user with "friend_list.html" %}``)::
+    (``{% render_friends user using "friend_list.html" %}``)::
 
         class RenderFriends(ttag.helpers.TemplateTag)
             user = ttag.Arg()
@@ -79,27 +79,39 @@ TemplateTag
         {% endfor %}
         </ul>
 
-    Some additional customization attributes to those which are provided in the
+    One additional method of interest is ``using``, which allows you to
+    provide the template(s) to render the template tag with if no template
+    was given via the ``using`` tag argument.
+
+    .. method:: using(self, context)
+
+        Returns the template path or a list of template paths to be
+        used when rendering the template tag with the
+        :func:`~django.template.loader.render_to_string`. This method
+        will only be considered if the template tag wasn't passed a
+        template path with the ``using`` argument.
+
+        Following the example above you could extend it to use a
+        user specific template if available and fall back to a general
+        template otherwise::
+
+        class RenderFriends(ttag.helpers.TemplateTag)
+            user = ttag.Arg()
+
+            def output(self, data):
+                return data['user'].friends_set.all()
+
+            def using(self, data):
+                return [
+                    'friend_list_%s.html' % data['user'].username,
+                    'friend_list.html',
+                ]
+
+    An additional customization attribute to those which are provided in the
     standard ``Tag``'s :attr:`~ttag.Tag.Meta` class are available:
 
     .. class:: Meta
 
         .. attribute:: template_name
 
-            Use some other argument name rather than the default of ``with``.
-
-        .. attribute:: template_required
-
-            Set whether or not ``with template`` argument is required
-            (defaults to ``True``).
-
-            In case ``template_required`` is set to ``False`` and you don't
-            specify a specific template, ttag will automatically construct the
-            template path to render the template tag's output like this:
-            ``ttag/<lowercase module name>/<lowercase template tag name>.html``
-
-            For example, if the above template tag can be found in the
-            ``friends_tags`` template tag library, it could be called with
-            ``{% render_friends user %}``) and a template with the name
-            ``'ttag/friends_tags/render_friends.html'``.
-
+            Use some other argument name rather than the default of ``using``.

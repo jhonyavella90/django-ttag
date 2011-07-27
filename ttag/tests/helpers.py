@@ -68,12 +68,13 @@ class TemplateTag(TestCase):
         A tag with named arguments works with or without the argument as long
         as a default value is set.
         """
-        self.assertEqual(render('{% go with "the_flow.html" %}'), 'yeah')
+        self.assertRaises(template.TemplateSyntaxError, render, '{% go %}')
+        self.assertEqual(render('{% go using "the_flow.html" %}'), 'yeah')
 
     def test_optional(self):
         today = datetime.datetime.today()
         self.assertEqual(render('{% ask "What date is it?" %}'), today.strftime('%h %d, %Y'))
-        self.assertEqual(render('{% ask "What date is it" with "long.html" %}'), today.strftime('%B %d, %Y'))
+        self.assertEqual(render('{% ask "What date is it" using "long.html" %}'), today.strftime('%B %d, %Y'))
         self.assertEqual(render('{% ask "What the frak?" %}'), "")
 
     def test_with_argument(self):

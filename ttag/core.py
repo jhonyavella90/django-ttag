@@ -9,6 +9,8 @@ class Options(object):
         super(Options, self).__init__(*args, **kwargs)
         self.positional_args = []
         self.named_args = {}
+        # A list of argument names that are inherited from bases
+        self.parent_args = []
         self.name = getattr(meta, 'name', None)
         self.block = getattr(meta, 'block', False)
         self.end_block = getattr(meta, 'end_block', 'end%(name)s')
@@ -103,6 +105,7 @@ class DeclarativeArgsMetaclass(type):
                 for arg_name, arg in base_opts.named_args.iteritems():
                     if arg_name not in opts.named_args:
                         opts.named_args[arg_name] = arg
+                        opts.parent_args.append(arg_name)
 
         attrs['_meta'] = opts
 

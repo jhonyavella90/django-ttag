@@ -3,13 +3,21 @@ import ttag
 
 from django import template
 
+
 register = template.Library()
 
+class SelfReferentialTag(ttag.helpers.TemplateTag):
 
-class Do(ttag.helpers.TemplateTag):
+    def using(self, data):
+        return 'ttag/%s/%s.html' % (
+            self.__class__.__module__.split('.')[-1].lower(),
+            self._meta.name.lower()
+        )
+
+
+class Do(SelfReferentialTag):
 
     class Meta:
-        template_required = False
         template_name = 'it'
 
     def output(self, data):
@@ -22,11 +30,8 @@ class Go(ttag.helpers.TemplateTag):
         return 'home'
 
 
-class Ask(ttag.helpers.TemplateTag):
+class Ask(SelfReferentialTag):
     value = ttag.Arg()
-
-    class Meta:
-        template_required = False
 
     def output(self, data):
         if "date" in data['value']:
