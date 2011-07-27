@@ -22,7 +22,6 @@ class TemplateTagOptions(core.Options):
 
         arg = args.Arg(required=False, named=True)
         arg.name = self.template_name
-        arg.provided = True
         self.named_args[self.template_name] = arg
 
 
