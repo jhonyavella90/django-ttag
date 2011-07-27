@@ -108,7 +108,7 @@ TemplateTag
                 ]
 
     An additional customization attribute to those which are provided in the
-    standard ``Tag``'s :attr:`~ttag.Tag.Meta` class are available:
+    standard ``Tag``'s :attr:`~ttag.Tag.Meta` class is available:
 
     .. class:: Meta
 
