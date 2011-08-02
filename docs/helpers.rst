@@ -47,3 +47,71 @@ AsTag
 
         Returns the data you want to render when ``as varname`` is used.
         Defaults to ``''``.
+
+
+TemplateTag
+===========
+
+.. currentmodule:: ttag.helpers
+
+.. class:: TemplateTag
+
+    Allows creating a template tag whose output is rendered with a template.
+
+    For example, if you wanted a tag which would render a QuerySet containing
+    a user's friends with a specific template
+    (``{% render_friends user using "friend_list.html" %}``)::
+
+        class RenderFriends(ttag.helpers.TemplateTag)
+            user = ttag.Arg()
+
+            def output(self, data):
+                return data['user'].friends_set.all()
+
+    the template ``friend_list.html`` would automatically be passed the
+    data and output variables as well as the rest of the context in which
+    the template tag was called in::
+
+        <h3>Friends of {{ data.user }} for {{ user }}</h3>
+        <ul>
+        {% for friend in output %}
+            <li>{{ friend.username }}</li>
+        {% endfor %}
+        </ul>
+
+    One additional method of interest is ``using``, which allows you to
+    provide the template(s) to render the template tag with if no template
+    was given via the ``using`` tag argument.
+
+    .. method:: using(self, context)
+
+        Returns the template path or a list of template paths to be
+        used when rendering the template tag with the
+        :func:`~django.template.loader.render_to_string`. This method
+        will only be considered if the template tag wasn't passed a
+        template path with the ``using`` argument.
+
+        Following the example above you could extend it to use a
+        user specific template if available and fall back to a general
+        template otherwise::
+
+        class RenderFriends(ttag.helpers.TemplateTag)
+            user = ttag.Arg()
+
+            def output(self, data):
+                return data['user'].friends_set.all()
+
+            def using(self, data):
+                return [
+                    'friend_list_%s.html' % data['user'].username,
+                    'friend_list.html',
+                ]
+
+    An additional customization attribute to those which are provided in the
+    standard ``Tag``'s :attr:`~ttag.Tag.Meta` class is available:
+
+    .. class:: Meta
+
+        .. attribute:: template_name
+
+            Use some other argument name rather than the default of ``using``.

@@ -15,7 +15,7 @@ Here is a full example tag::
         def output(self, data)
             name = data['user'].get_full_name()
             if name:
-            	return 'Hi, %s!' % name
+                return 'Hi, %s!' % name
             return data['fallback']
 
 This would produce a tag named ``welcome`` which can be used like this::
