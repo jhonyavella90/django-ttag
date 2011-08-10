@@ -95,17 +95,17 @@ TemplateTag
         user specific template if available and fall back to a general
         template otherwise::
 
-        class RenderFriends(ttag.helpers.TemplateTag)
-            user = ttag.Arg()
+            class RenderFriends(ttag.helpers.TemplateTag)
+                user = ttag.Arg()
 
-            def output(self, data):
-                return data['user'].friends_set.all()
+                def output(self, data):
+                    return data['user'].friends_set.all()
 
-            def using(self, data):
-                return [
-                    'friend_list_%s.html' % data['user'].username,
-                    'friend_list.html',
-                ]
+                def using(self, data):
+                    return [
+                        'friend_list_%s.html' % data['user'].username,
+                        'friend_list.html',
+                    ]
 
     An additional customization attribute to those which are provided in the
     standard ``Tag``'s :attr:`~ttag.Tag.Meta` class is available:
