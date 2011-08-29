@@ -2,7 +2,6 @@ from django import template
 
 from ttag import utils, args
 
-
 class Options(object):
 
     def __init__(self, meta, *args, **kwargs):
@@ -142,10 +141,9 @@ class BaseTag(template.Node):
                 attr = 'nodelist%s' % (current and '_%s' % current or '')
                 nodelists[attr] = parser.parse(block_names)
                 current = parser.next_token().contents
-                parser.delete_first_token()
-                if current == self.end_block:
+                if current == self._meta.end_block:
                     break
-            for name, required in other_blocks:
+            for name, required in other_blocks.iteritems():
                 if name in nodelists:
                     continue
                 if required:
@@ -153,7 +151,7 @@ class BaseTag(template.Node):
                                                        name)
                 nodelists[name] = template.NodeList()
             self.child_nodelists = list(nodelists)
-            for attr, nodelist in nodelists:
+            for attr, nodelist in nodelists.iteritems():
                 setattr(self, attr, nodelist)
 
     def _valid_named_args(self):
