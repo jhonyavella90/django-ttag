@@ -58,6 +58,15 @@ class TagExecutionTests(TestCase):
         self.assertRaises(template.TemplateSyntaxError, template.Template,
                           '{% constant 1 t 2 %}', {'t': 'to'})
 
+    def test_block_tag(self):
+        """tags with a block meta option"""
+        self.assertEqual(render('{% repeat 5 %}a{% done %}'), 'aaaaa')
+
+    def test_multiple_block_tag(self):
+        """tags with a block meta option"""
+        self.assertEqual(render('{% repeat_with_empty 5 %}a{% empty %}b{% stop %}'), 'aaaaa')
+        self.assertEqual(render('{% repeat_with_empty 0 %}a{% empty %}b{% stop %}'), 'b')
+
 
 def build_invalid_positional_optional():
 

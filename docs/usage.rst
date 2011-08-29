@@ -276,7 +276,7 @@ More advanced cases can be handled using Django's standard parser in the
     class AdvancedTag(ttags.Tag):
 
         def __init__(self, parser, token):
-            super(Repeat, self).__init__(parser, token)
+            super(AdvancedTag, self).__init__(parser, token)
             # Do whatever fancy parser modification you like.
 
 

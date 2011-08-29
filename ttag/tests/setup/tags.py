@@ -142,6 +142,42 @@ class DotCombineDefault(DotCombine):
         return '.'.join(args)
 
 
+class Repeat(TestTag):
+    count = ttag.IntegerArg()
+
+    class Meta:
+        block = True
+        end_block = 'done'
+
+    def render(self, context):
+        data = self.resolve(context)
+        output = []
+        for i in range(data['count']):
+            context.push()
+            output.append(self.nodelist.render(context))
+            context.pop()
+        return ''.join(output)
+
+
+class RepeatWithEmpty(TestTag):
+    count = ttag.IntegerArg()
+
+    class Meta:
+        block = {'empty': False}
+        end_block = 'stop'
+
+    def render(self, context):
+        data = self.resolve(context)
+        if not data['count']:
+            return self.nodelist_empty.render(context)
+        output = []
+        for i in range(data['count']):
+            context.push()
+            output.append(self.nodelist.render(context))
+            context.pop()
+        return ''.join(output)
+
+
 class BaseInclude(TestTag):
     """
     A tag for testing KeywordsArg.
