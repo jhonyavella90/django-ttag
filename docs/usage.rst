@@ -120,7 +120,7 @@ example:
 Here's an example of what the ``{% slap %}`` tag above may look like::
 
     class Slap(ttag.Tag):
-        with_ = ttag.Arg()
+        with_ = ttag.Arg(named=True)
 
         def output(self, data):
             return "You have been slapped with a %s" % data['with']

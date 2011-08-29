@@ -1,3 +1,4 @@
+import copy
 import datetime
 import re
 from django.template import TemplateSyntaxError, FilterExpression, Variable, \
@@ -141,26 +142,28 @@ class Arg(object):
         """
         if not isinstance(value, (Variable, FilterExpression)):
             return value
+        original_value = value
+        if isinstance(value, FilterExpression):
+            # Set value to be the variable part of the filter expression. This
+            # will be a Variable or a constant string.
+            value = value.var
         if isinstance(value, Variable):
-            resolved_value = value
-        else:
-            resolved_value = value.var
-        if isinstance(resolved_value, Variable):
+            # Resolve the variable, raising an exception if a missing variable
+            # was encountered (unless self.null is set).
             try:
-                resolved_value = resolved_value.resolve(context)
+                value = value.resolve(context)
             except VariableDoesNotExist:
                 if not self.null:
                     raise TagValidationError(
-                        "Variable '%s' was not found." % resolved_value.var
+                        "Variable '%s' was not found." % value.var
                     )
-                resolved_value = None
-        if isinstance(value, Variable):
-            value = resolved_value
-        else:
-            obj = FilterExpression(token=value.token, parser=None)
-            obj.filters = value.filters
-            obj.val = resolved_value
-            value = obj.resolve(context)
+                value = None
+        if isinstance(original_value, FilterExpression):
+            # Run the resolved value through a copy of the filter expression so
+            # that any filters defined in the expression are executed.
+            expression = copy.copy(original_value)
+            expression.var = value
+            value = expression.resolve(context)
         return value
 
     def clean(self, value):
