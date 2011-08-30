@@ -12,14 +12,13 @@ class AsTagOptions(core.Options):
 
     def post_process(self):
         super(AsTagOptions, self).post_process()
-        if self.as_name in [name for name, arg in self.named_args.items()
-                            if not arg.keyword]:
+        non_keyword_args = [name for name, arg in self.named_args.items()
+                            if not arg.keyword]
+        if (self.as_name in non_keyword_args and
+                self.as_name not in self.parent_args):
             raise template.TemplateSyntaxError(
-                "%s can not explicitly define an named argument called %r" % (
-                    self.name,
-                    self.as_name,
-                )
-            )
+                "%s can not explicitly define an named argument called %r" %
+                (self.name, self.as_name))
         arg = args.BasicArg(required=self.as_required, named=True)
         arg.name = self.as_name
         self.named_args[self.as_name] = arg

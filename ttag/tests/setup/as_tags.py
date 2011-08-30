@@ -6,9 +6,13 @@ register = template.Library()
 
 
 class FishAs(ttag.helpers.AsTag):
-    
+
     def as_value(self, data, context):
         return 'fish'
+
+
+class AnotherFishAs(FishAs):
+    pass
 
 
 class MaybeAs(ttag.helpers.AsTag):
@@ -34,5 +38,6 @@ class OutputAs(ttag.helpers.AsTag):
 
 
 register.tag(FishAs)
+register.tag(AnotherFishAs)
 register.tag(MaybeAs)
 register.tag(OutputAs)

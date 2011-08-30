@@ -24,6 +24,7 @@ class AsTag(TestCase):
         as a default value is set.
         """
         self.assertEqual(render('{% fish_as as out %}-{{ out }}'), '-fish')
+        self.assertEqual(render('{% another_fish_as as out %}-{{ out }}'), '-fish')
 
     def test_optional(self):
         """
