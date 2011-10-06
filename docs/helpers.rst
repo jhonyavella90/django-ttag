@@ -83,7 +83,7 @@ TemplateTag
     provide the template(s) to render the template tag with if no template
     was given via the ``using`` tag argument.
 
-    .. method:: using(self, context)
+    .. method:: using(self, data)
 
         Returns the template path or a list of template paths to be
         used when rendering the template tag with the
