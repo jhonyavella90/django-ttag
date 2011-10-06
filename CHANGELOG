@@ -1,3 +1,13 @@
+Version 2.3
+===========
+
+* Minor documentation fixes.
+
+* Fixed block tags so they actually work. Thanks again, Jannis.
+
+* Fixed an issue when subclassing tags based on the ``AsTag`` helper.
+
+
 Version 2.2
 ===========
 
