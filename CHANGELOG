@@ -1,3 +1,12 @@
+Version 2.4
+===========
+
+* More documentation fixes.
+
+* ``AsTag`` has a new ``as_default`` Meta option to provide a default variable
+  name if the ``as`` argument is not provided.
+
+
 Version 2.3
 ===========
 

@@ -43,6 +43,13 @@ class AsTag(TestCase):
         self.assertEqual(render('{% output_as 1 as out %}-{{ out }}'),
                          'yes_as-1')
 
+    def test_as_default(self):
+        """
+        A default variable name can be used (which will force ``as_required``
+        to ``False``).
+        """
+        self.assertEqual(render('{% default_as %}...{{ snake }}'), '...hisss')
+
     def test_invalid_as_name(self):
         """
         A tag can't be create with an as_name which matches a named argument.

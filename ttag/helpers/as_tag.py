@@ -7,7 +7,11 @@ class AsTagOptions(core.Options):
 
     def __init__(self, meta, *args, **kwargs):
         super(AsTagOptions, self).__init__(meta=meta, *args, **kwargs)
-        self.as_required = getattr(meta, 'as_required', True)
+        self.as_default = getattr(meta, 'as_default', None)
+        if self.as_default:
+            self.as_required = False
+        else:
+            self.as_required = getattr(meta, 'as_required', True)
         self.as_name = getattr(meta, 'as_name', 'as')
 
     def post_process(self):
@@ -33,7 +37,7 @@ class AsTag(core.BaseTag):
 
     def render(self, context):
         data = self.resolve(context)
-        as_var = data.get(self._meta.as_name)
+        as_var = data.get(self._meta.as_name, self._meta.as_default)
         value = self.as_value(data, context)
         if as_var:
             context[as_var] = value

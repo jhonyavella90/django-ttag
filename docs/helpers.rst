@@ -18,13 +18,18 @@ AsTag
         class GetName(ttag.helpers.AsTag)
             user = ttag.Arg()
 
-            def output(self, data, context):
+            def output(self, data):
                 return data['user'].friends_set.all()
 
     Some additional customization attributes to those which are provided in the
     standard ``Tag``'s :attr:`~ttag.Tag.Meta` class are available:
 
     .. class:: Meta
+
+        .. attribute:: as_default
+
+            A default variable name is the ``as`` argument is not provided.
+            This forces :attr:`as_required` to ``False``.
 
         .. attribute:: as_name
 
