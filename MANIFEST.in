@@ -3,3 +3,4 @@ include LICENSE
 include README.rst
 include tagcon.LICENSE
 recursive-include docs *
+recursive-exclude docs/_build *
