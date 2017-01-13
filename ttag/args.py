@@ -1,8 +1,8 @@
 import copy
 import datetime
 import re
-from django.template import TemplateSyntaxError, FilterExpression, Variable, \
-    VariableDoesNotExist
+from django.template import TemplateSyntaxError, Variable, VariableDoesNotExist
+from django.template.base import FilterExpression
 from django.utils.encoding import force_unicode
 from ttag.exceptions import TagValidationError
 
